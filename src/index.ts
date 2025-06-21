@@ -24,7 +24,7 @@ import {
   PlatformAccessoryEvent,
 } from 'homebridge'
 
-import { UiApi } from './ui-api.js'
+import { InstalledPlugin, UiApi } from './ui-api.js'
 
 let hap: HAP
 let Accessory: typeof PlatformAccessory
@@ -125,17 +125,36 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkUi(): Promise<number> {
-    const plugins = await this.uiApi.getPlugins()
-    const homebridge = await this.uiApi.getHomebridge()
-    plugins.push(homebridge)
+    let updatesAvailable: InstalledPlugin[] = []
+    
+    if (this.checkHB) {
+      const homebridge = await this.uiApi.getHomebridge()
 
+      if (homebridge.updateAvailable) {
+        updatesAvailable.push(homebridge)
+      }
+    }
 
+    if (this.checkHBUI || this.checkPlugins) {
+      let plugins = await this.uiApi.getPlugins()
 
-    const results = plugins.filter(plugin => plugin.updateAvailable)
-    this.log.debug(`homebridge-config-ui-x reports ${results.length
-    } outdated package(s): ${JSON.stringify(results)}`)
+      // Filter out Homebridge UI plugin
+      if (!this.checkHBUI) {
+        plugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+      }
 
-    return results.length
+      // Select only Homebridge UI plugin
+      if (!this.checkPlugins) {
+        plugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
+      }
+
+      plugins = plugins.filter(plugin => plugin.updateAvailable)
+      updatesAvailable.push(...plugins)
+    }
+
+    this.log.debug(`homebridge-config-ui-x reports ${updatesAvailable.length} outdated package(s): ${JSON.stringify(updatesAvailable)}`)
+
+    return updatesAvailable.length
   }
 
   doCheck(): void {
