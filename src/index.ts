@@ -47,6 +47,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly useNcu: boolean
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
+  private readonly checkHB: boolean
+  private readonly checkHBUI: boolean
+  private readonly checkPlugins: boolean
   private service?: Service
   private timer?: NodeJS.Timeout
 
@@ -62,6 +65,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
+
+    this.checkHB = this.config.checkHomebridge || true;
+    this.checkHBUI = this.config.checkHomebridgeUI || true;
+    this.checkPlugins = this.config.checkPlugins || true;
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -121,6 +128,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     const plugins = await this.uiApi.getPlugins()
     const homebridge = await this.uiApi.getHomebridge()
     plugins.push(homebridge)
+
+
 
     const results = plugins.filter(plugin => plugin.updateAvailable)
     this.log.debug(`homebridge-config-ui-x reports ${results.length
