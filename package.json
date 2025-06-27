@@ -38,7 +38,12 @@
   "keywords": [
     "homebridge-plugin",
     "plugin",
-    "update"
+    "update",
+    "updates",
+    "upgrade",
+    "upgrades",
+    "version",
+    "versions"
   ],
   "main": "dist/index.js",
   "files": [
