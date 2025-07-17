@@ -24,7 +24,7 @@ import {
   PlatformAccessoryEvent,
 } from 'homebridge'
 
-import { UiApi } from './ui-api.js'
+import { InstalledPlugin, UiApi } from './ui-api.js'
 
 let hap: HAP
 let Accessory: typeof PlatformAccessory
@@ -47,6 +47,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly useNcu: boolean
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
+  private readonly checkHB: boolean
+  private readonly checkHBUI: boolean
+  private readonly checkPlugins: boolean
   private service?: Service
   private timer?: NodeJS.Timeout
 
@@ -62,6 +65,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
+
+    this.checkHB = this.config.checkHomebridge || true;
+    this.checkHBUI = this.config.checkHomebridgeUI || true;
+    this.checkPlugins = this.config.checkPlugins || true;
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -118,15 +125,36 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkUi(): Promise<number> {
-    const plugins = await this.uiApi.getPlugins()
-    const homebridge = await this.uiApi.getHomebridge()
-    plugins.push(homebridge)
+    let updatesAvailable: InstalledPlugin[] = []
+    
+    if (this.checkHB) {
+      const homebridge = await this.uiApi.getHomebridge()
 
-    const results = plugins.filter(plugin => plugin.updateAvailable)
-    this.log.debug(`homebridge-config-ui-x reports ${results.length
-    } outdated package(s): ${JSON.stringify(results)}`)
+      if (homebridge.updateAvailable) {
+        updatesAvailable.push(homebridge)
+      }
+    }
 
-    return results.length
+    if (this.checkHBUI || this.checkPlugins) {
+      let plugins = await this.uiApi.getPlugins()
+
+      // Filter out Homebridge UI plugin
+      if (!this.checkHBUI) {
+        plugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+      }
+
+      // Select only Homebridge UI plugin
+      if (!this.checkPlugins) {
+        plugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
+      }
+
+      plugins = plugins.filter(plugin => plugin.updateAvailable)
+      updatesAvailable.push(...plugins)
+    }
+
+    this.log.debug(`homebridge-config-ui-x reports ${updatesAvailable.length} outdated package(s): ${JSON.stringify(updatesAvailable)}`)
+
+    return updatesAvailable.length
   }
 
   doCheck(): void {

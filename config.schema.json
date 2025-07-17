@@ -65,6 +65,24 @@
           }
         ]
       },
+      "checkHomebridgeUpdates": {
+        "title": "Check for Homebridge updates",
+        "type": "boolean",
+        "description": "Check if an update is available for the Homebridge server",
+        "default": true
+      },
+      "checkHomebridgeUIUpdates": {
+        "title": "Check for Homebridge Config UI updates",
+        "type": "boolean",
+        "description": "Check if an update is available for the Homebridge UI",
+        "default": true
+      },
+      "checkPluginUpdates": {
+        "title": "Check for plugin updates",
+        "type": "boolean",
+        "description": "Check if updates are available for any installed plugins",
+        "default": true
+      },
       "forceNcu": {
         "title": "Force npm-check-updates",
         "type": "boolean",

@@ -21,6 +21,9 @@ Configuration sample:
     {
         "platform": "PluginUpdate",
         "sensorType": "motion",
+        "checkHomebridge": true,
+        "checkHomebridgeUI": true,
+        "checkPlugins": true,
         "forceNcu": false
     }
 ]
@@ -30,4 +33,9 @@ Configuration sample:
 
 * "platform": Must always be "PluginUpdate" (required)
 * "sensorType": What type of sensor will be exposed to HomeKit. Can be `motion`, `contact`, `occupancy`, `humidity`, `light`, `air`, `leak`, `smoke`, `dioxide`, or `monoxide` (Default: `motion`)
+* "checkHomebridge": Check if an update is available for the Homebridge server
+* "checkHomebridgeUI: Check if an update is available for the Homebridge UI
+* "checkPlugins": Check if updates are available for any installed plugins
 * "forceNcu": Force use of npm-check-updates instead of homebridge-config-ui-x. (Default: `false`)
+
+Homebridge, Homebridge UI, and plugin updates can be selected independently. This allows you for example, to ignore available Homebridge, Homebridge UI available updates if you are running Homebridge in a Docker container and wish to only update these components when a new Docker image is available.
