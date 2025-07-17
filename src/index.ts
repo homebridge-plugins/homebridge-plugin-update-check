@@ -66,9 +66,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
 
-    this.checkHB = this.config.checkHomebridge || true;
-    this.checkHBUI = this.config.checkHomebridgeUI || true;
-    this.checkPlugins = this.config.checkPlugins || true;
+    this.checkHB = this.config.checkHomebridge ?? false;
+    this.checkHBUI = this.config.checkHomebridgeUI ?? false;
+    this.checkPlugins = this.config.checkPlugins ?? false;
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
