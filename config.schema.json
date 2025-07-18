@@ -83,10 +83,16 @@
         "description": "Check if updates are available for any installed plugins",
         "default": true
       },
+      "checkDockerUpdates": {
+        "title": "Check for Docker image updates",
+        "type": "boolean",
+        "description": "Check if Docker image updates are available (only if running in Docker container)",
+        "default": true
+      },
       "forceNcu": {
         "title": "Force npm-check-updates",
         "type": "boolean",
-        "description": "Force use of node-check-updates instead of homebridge-config-ui-x."
+        "description": "Force use of node-check-updates instead of homebridge-config-ui-x"
       }
     }
   }
