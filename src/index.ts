@@ -70,9 +70,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
 
-    this.checkHB = this.config.checkHomebridge ?? false
-    this.checkHBUI = this.config.checkHomebridgeUI ?? false
-    this.checkPlugins = this.config.checkPlugins ?? false
+    this.checkHB = this.config.checkHomebridgeUpdates ?? false
+    this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
+    this.checkPlugins = this.config.checkPluginUpdates ?? false
     this.checkDocker = this.config.checkDockerUpdates ?? false
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
@@ -201,7 +201,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         this.log.error(ex)
       })
       .finally((): void => {
-        this.timer = setTimeout(this.doCheck.bind(this), 8 * 60 * 60 * 1000)
+        this.timer = setTimeout(this.doCheck.bind(this), 60 * 60 * 1000)
       })
   }
 
@@ -323,7 +323,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
     }
 
-    this.timer = setTimeout(this.doCheck.bind(this), 60 * 1000) // Oznu recommends waiting 60 seconds on start
+    this.timer = setTimeout(this.doCheck.bind(this), 10 * 1000)
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {

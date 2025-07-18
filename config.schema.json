@@ -86,8 +86,7 @@
       "checkDockerUpdates": {
         "title": "Check for Docker image updates",
         "type": "boolean",
-        "description": "Check if Docker image updates are available (only if running in Docker container)",
-        "default": true
+        "description": "Check if Docker image updates are available (ignored if not running in Docker container)"
       },
       "forceNcu": {
         "title": "Force npm-check-updates",
