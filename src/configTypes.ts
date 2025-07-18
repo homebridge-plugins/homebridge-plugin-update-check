@@ -4,7 +4,7 @@ export interface PluginUpdatePlatformConfig {
   platform: PlatformName | PlatformIdentifier
   forceNcu?: boolean
   sensorType?: string
-  checkHomebridge?: boolean
-  checkHomebridgeUI?: boolean
-  checkPlugins?: boolean
+  checkHomebridgeUpdates?: boolean
+  checkHomebridgeUIUpdates?: boolean
+  checkPluginUpdates?: boolean
 }
