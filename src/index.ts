@@ -1,3 +1,5 @@
+/* eslint-disable antfu/if-newline */
+
 import type {
   API,
   Characteristic,
@@ -24,6 +26,7 @@ import {
   PlatformAccessoryEvent,
 } from 'homebridge'
 
+// eslint-disable-next-line ts/consistent-type-imports
 import { InstalledPlugin, UiApi } from './ui-api.js'
 
 let hap: HAP
@@ -50,6 +53,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
+  private readonly checkDocker: boolean
   private service?: Service
   private timer?: NodeJS.Timeout
 
@@ -66,19 +70,20 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
 
-    this.checkHB = this.config.checkHomebridgeUpdates ?? false;
-    this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false;
-    this.checkPlugins = this.config.checkPluginUpdates ?? false;
+    this.checkHB = this.config.checkHomebridgeUpdates ?? false
+    this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
+    this.checkPlugins = this.config.checkPluginUpdates ?? false
+    this.checkDocker = this.config.checkDockerUpdates ?? false
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
-  async runNcu(args: Array<string>): Promise<any> {
+  async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
     args = [
       path.resolve(__dirname, '../node_modules/npm-check-updates/build/src/bin/cli.js'),
       '--jsonUpgraded',
       '--filter',
-      '/^(@.*\\/)?homebridge(-.*)?$/',
+      filter,
     ].concat(args)
 
     const output = await new Promise<string>((resolve, reject) => {
@@ -110,23 +115,39 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkNcu(): Promise<number> {
-    let results = await this.runNcu(['--global'])
+    const homebridgeFilter = 'homebridge'
+    const homebridgeUIFilter = 'homebridge-config-ui-x'
+    const pluginsFilter = '(?=(@.*\\/)?homebridge-)(?:(?!homebridge-config-ui-x).)*'
+
+    const filters: string[] = []
+    if (this.checkHB) filters.push(homebridgeFilter)
+    if (this.checkHBUI) filters.push(homebridgeUIFilter)
+    if (this.checkPlugins) filters.push(pluginsFilter)
+
+    // eslint-disable-next-line prefer-template
+    const filter = '/^' + filters.join('|') + ')$/'
+
+    let results = await this.runNcu(['--global'], filter)
 
     if (this.isDocker) {
-      const dockerResults = await this.runNcu(['--packageFile', '/homebridge/package.json'])
-      results = { ...results, ...dockerResults }
+      const dockerPackageResults = await this.runNcu(['--packageFile', '/homebridge/package.json'], filter)
+      results = { ...results, ...dockerPackageResults }
+
+      const docker = await this.uiApi.getDocker()
+      if (docker.updateAvailable) {
+        results.push(docker)
+      }
     }
 
     const updates = Object.keys(results).length
-    this.log.debug(`npm-check-updates reports ${updates
-    } outdated package(s): ${JSON.stringify(results)}`)
+    this.log.debug(`npm-check-updates reports ${updates} available update(s): ${JSON.stringify(results)}`)
 
     return updates
   }
 
   async checkUi(): Promise<number> {
-    let updatesAvailable: InstalledPlugin[] = []
-    
+    const updatesAvailable: InstalledPlugin[] = []
+
     if (this.checkHB) {
       const homebridge = await this.uiApi.getHomebridge()
 
@@ -152,7 +173,15 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       updatesAvailable.push(...plugins)
     }
 
-    this.log.debug(`homebridge-config-ui-x reports ${updatesAvailable.length} outdated package(s): ${JSON.stringify(updatesAvailable)}`)
+    if (this.isDocker && this.checkDocker) {
+      const docker = await this.uiApi.getDocker()
+
+      if (docker.updateAvailable) {
+        updatesAvailable.push(docker)
+      }
+    }
+
+    this.log.debug(`homebridge-config-ui-x reports ${updatesAvailable.length} available update(s): ${JSON.stringify(updatesAvailable)}`)
 
     return updatesAvailable.length
   }
