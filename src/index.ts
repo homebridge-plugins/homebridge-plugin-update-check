@@ -65,7 +65,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.config = config as PluginUpdatePlatformConfig
     this.api = api
 
-    this.uiApi = new UiApi(this.api.user.storagePath())
+    this.uiApi = new UiApi(this.api.user.storagePath(), this.log)
     this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
@@ -153,24 +153,31 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
       if (homebridge.updateAvailable) {
         updatesAvailable.push(homebridge)
+
+        this.log.debug(`Homebridge update available: ${homebridge.latestVersion}`)
       }
     }
 
     if (this.checkHBUI || this.checkPlugins) {
-      let plugins = await this.uiApi.getPlugins()
+      const plugins = await this.uiApi.getPlugins()
 
-      // Filter out Homebridge UI plugin
-      if (!this.checkHBUI) {
-        plugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+      if (this.checkHBUI) {
+        const filteredPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
+        updatesAvailable.push(...filteredPlugins)
+
+        filteredPlugins.forEach((plugin) => {
+          this.log.debug(`Homebridge UI update available: ${plugin.latestVersion}`)
+        })
       }
 
-      // Select only Homebridge UI plugin
-      if (!this.checkPlugins) {
-        plugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
-      }
+      if (this.checkPlugins) {
+        const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+        updatesAvailable.push(...filteredPlugins)
 
-      plugins = plugins.filter(plugin => plugin.updateAvailable)
-      updatesAvailable.push(...plugins)
+        filteredPlugins.forEach((plugin) => {
+          this.log.debug(`Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
+        })
+      }
     }
 
     if (this.isDocker && this.checkDocker) {
@@ -178,10 +185,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
       if (docker.updateAvailable) {
         updatesAvailable.push(docker)
+
+        this.log.debug(`Docker update available: ${docker.latestVersion}`)
       }
     }
 
-    this.log.debug(`homebridge-config-ui-x reports ${updatesAvailable.length} available update(s): ${JSON.stringify(updatesAvailable)}`)
+    this.log.debug(`Found ${updatesAvailable.length} available update(s)`)
 
     return updatesAvailable.length
   }
