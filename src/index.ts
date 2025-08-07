@@ -154,7 +154,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (homebridge.updateAvailable) {
         updatesAvailable.push(homebridge)
 
-        this.log.debug(`Homebridge update available: ${homebridge.latestVersion}`)
+        this.log.info(`Homebridge update available: ${homebridge.latestVersion}`)
       }
     }
 
@@ -166,7 +166,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         updatesAvailable.push(...filteredPlugins)
 
         filteredPlugins.forEach((plugin) => {
-          this.log.debug(`Homebridge UI update available: ${plugin.latestVersion}`)
+          this.log.info(`Homebridge UI update available: ${plugin.latestVersion}`)
         })
       }
 
@@ -175,7 +175,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         updatesAvailable.push(...filteredPlugins)
 
         filteredPlugins.forEach((plugin) => {
-          this.log.debug(`Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
+          this.log.info(`Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
         })
       }
     }
@@ -186,7 +186,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (docker.updateAvailable) {
         updatesAvailable.push(docker)
 
-        this.log.debug(`Docker update available: ${docker.latestVersion}`)
+        this.log.info(`Docker update available: ${docker.latestVersion}`)
       }
     }
 
