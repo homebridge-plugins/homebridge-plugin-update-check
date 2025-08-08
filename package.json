@@ -2,7 +2,7 @@
   "name": "@homebridge-plugins/homebridge-plugin-update-check",
   "displayName": "Homebridge Plugin Update Check",
   "type": "module",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "A Homebridge plugin for checking for updates to Homebridge and plugins",
   "author": "David Maher",
   "license": "BSD-2-Clause",
