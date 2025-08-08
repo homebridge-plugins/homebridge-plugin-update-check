@@ -163,19 +163,23 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
       if (this.checkHBUI) {
         const filteredPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
-        updatesAvailable.push(...filteredPlugins)
 
         filteredPlugins.forEach((plugin) => {
-          this.log.info(`Homebridge UI update available: ${plugin.latestVersion}`)
+          if (plugin.updateAvailable) {
+            updatesAvailable.push(plugin)
+            this.log.info(`Homebridge UI update available: ${plugin.latestVersion}`)
+          }
         })
       }
 
       if (this.checkPlugins) {
         const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
-        updatesAvailable.push(...filteredPlugins)
 
         filteredPlugins.forEach((plugin) => {
-          this.log.info(`Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
+          if (plugin.updateAvailable) {
+            updatesAvailable.push(plugin)
+            this.log.info(`Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
+          }
         })
       }
     }
