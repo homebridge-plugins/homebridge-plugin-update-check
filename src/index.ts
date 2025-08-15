@@ -29,7 +29,7 @@ import { hostname } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import { Cron } from 'croner';
+import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
 import { InstalledPlugin, UiApi } from './ui-api.js'
@@ -63,7 +63,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private service?: Service
 
-  private cronJob: Cron
+  private cronJob!: Cron
   private firstDailyRun: boolean = true
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
