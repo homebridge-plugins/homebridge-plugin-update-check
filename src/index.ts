@@ -99,7 +99,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
     }
 
-    setTimeout(this.doCheck.bind(this), 10 * 1000)
+    setTimeout(() => {
+      this.doCheck()
+      this.firstDailyRun = false
+    }, 10 * 1000)
 
     const timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
     this.setupFirstDailyRunResetCron(timezone)
@@ -117,6 +120,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       },
       async () => {
         this.firstDailyRun = true
+        this.log.debug(`Reset "firstDailyRun" to ${this.firstDailyRun}`)
       },
     )
   }
@@ -131,8 +135,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         timezone: timezone,
       },
       async () => {
-        this.doCheck.bind(this)
-        this.firstDailyRun ??= false
+        this.log.debug(`Is first daily run: ${this.firstDailyRun}`)
+        this.doCheck()
+        this.firstDailyRun = false
+        this.log.debug(`Cleared "firstDailyRun" to ${this.firstDailyRun}`)
       },
     )
   }
@@ -174,6 +180,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkNcu(): Promise<number> {
+    this.log.debug('Checking for updates using NCU')
+
     const homebridgeFilter = 'homebridge'
     const homebridgeUIFilter = 'homebridge-config-ui-x'
     const pluginsFilter = '(?=(@.*\\/)?homebridge-)(?:(?!homebridge-config-ui-x).)*'
@@ -205,6 +213,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkUi(): Promise<number> {
+    this.log.debug('Searching for available updates ...')
+
     const logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
     const updatesAvailable: InstalledPlugin[] = []
 
@@ -262,12 +272,17 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   doCheck(): void {
     const check = this.useNcu ? this.checkNcu() : this.checkUi()
 
+    this.log.debug(`Checking with ncu: ${this.useNcu}`)
+
     check
       .then((updates) => {
         this.service?.setCharacteristic(this.sensorInfo.characteristicType, updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue)
       })
       .catch((ex) => {
         this.log.error(ex)
+      })
+      .finally(() => {
+        this.log.debug('Check complete')
       })
   }
 
