@@ -56,7 +56,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
-
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
