@@ -1,3 +1,5 @@
+/* eslint-disable object-shorthand */
+/* eslint-disable perfectionist/sort-imports */
 /* eslint-disable antfu/if-newline */
 
 import type {
@@ -13,6 +15,12 @@ import type {
   WithUUID,
 } from 'homebridge'
 
+import {
+  APIEvent,
+  LogLevel,
+  PlatformAccessoryEvent,
+} from 'homebridge'
+
 import type { PluginUpdatePlatformConfig } from './configTypes.js'
 
 import { spawn } from 'node:child_process'
@@ -21,10 +29,7 @@ import { hostname } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import {
-  APIEvent,
-  PlatformAccessoryEvent,
-} from 'homebridge'
+import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
 import { InstalledPlugin, UiApi } from './ui-api.js'
@@ -48,14 +53,18 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly config: PluginUpdatePlatformConfig
   private readonly uiApi: UiApi
   private readonly useNcu: boolean
+
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
   private readonly checkDocker: boolean
+
   private service?: Service
-  private timer?: NodeJS.Timeout
+
+  private cronJob!: Cron
+  private firstDailyRun: boolean = true
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -76,6 +85,62 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.checkDocker = this.config.checkDockerUpdates ?? false
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
+  }
+
+  addUpdateAccessory(): void {
+    if (!this.service) {
+      const uuid = hap.uuid.generate(PLATFORM_NAME)
+      const newAccessory = new Accessory('Plugin Update Check', uuid)
+
+      newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
+
+      this.configureAccessory(newAccessory)
+
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
+    }
+
+    setTimeout(() => {
+      this.doCheck()
+      this.firstDailyRun = false
+    }, 10 * 1000)
+
+    const timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
+    this.setupFirstDailyRunResetCron(timezone)
+    this.setupUpdatesCron(timezone)
+  }
+
+  setupFirstDailyRunResetCron(timezone: string): void {
+    const cronScheduleAtMidnight = '0 0 * * *'
+
+    this.cronJob = new Cron(
+      cronScheduleAtMidnight,
+      {
+        name: `First Daily Run Reset Cron Job`,
+        timezone: timezone,
+      },
+      async () => {
+        this.firstDailyRun = true
+        this.log.debug(`Reset "firstDailyRun" to ${this.firstDailyRun}`)
+      },
+    )
+  }
+
+  setupUpdatesCron(timezone: string): void {
+    const cronScheduleFiveAfterTheHour = '5 * * * *'
+
+    this.cronJob = new Cron(
+      cronScheduleFiveAfterTheHour,
+      {
+        name: `Updates Available Cron Job`,
+        timezone: timezone,
+      },
+      async () => {
+        this.log.debug(`Is first daily run: ${this.firstDailyRun}`)
+        this.doCheck()
+        this.firstDailyRun = false
+        this.log.debug(`Cleared "firstDailyRun" to ${this.firstDailyRun}`)
+      },
+    )
   }
 
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
@@ -115,6 +180,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkNcu(): Promise<number> {
+    this.log.debug('Checking for updates using NCU')
+
     const homebridgeFilter = 'homebridge'
     const homebridgeUIFilter = 'homebridge-config-ui-x'
     const pluginsFilter = '(?=(@.*\\/)?homebridge-)(?:(?!homebridge-config-ui-x).)*'
@@ -146,6 +213,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async checkUi(): Promise<number> {
+    this.log.debug('Searching for available updates ...')
+
+    const logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
     const updatesAvailable: InstalledPlugin[] = []
 
     if (this.checkHB) {
@@ -154,7 +224,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (homebridge.updateAvailable) {
         updatesAvailable.push(homebridge)
 
-        this.log.info(`Homebridge update available: ${homebridge.latestVersion}`)
+        this.log.log(logLevel, `Homebridge update available: ${homebridge.latestVersion}`)
       }
     }
 
@@ -167,7 +237,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
-            this.log.info(`Homebridge UI update available: ${plugin.latestVersion}`)
+            this.log.log(logLevel, `Homebridge UI update available: ${plugin.latestVersion}`)
           }
         })
       }
@@ -178,7 +248,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
-            this.log.info(`Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
+            this.log.log(logLevel, `Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
           }
         })
       }
@@ -190,21 +260,19 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (docker.updateAvailable) {
         updatesAvailable.push(docker)
 
-        this.log.info(`Docker update available: ${docker.latestVersion}`)
+        this.log.log(logLevel, `Docker update available: ${docker.latestVersion}`)
       }
     }
 
-    this.log.debug(`Found ${updatesAvailable.length} available update(s)`)
+    this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
 
     return updatesAvailable.length
   }
 
   doCheck(): void {
-    if (this.timer) {
-      clearTimeout(this.timer)
-    }
-
     const check = this.useNcu ? this.checkNcu() : this.checkUi()
+
+    this.log.debug(`Checking with ncu: ${this.useNcu}`)
 
     check
       .then((updates) => {
@@ -213,8 +281,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       .catch((ex) => {
         this.log.error(ex)
       })
-      .finally((): void => {
-        this.timer = setTimeout(this.doCheck.bind(this), 60 * 60 * 1000)
+      .finally(() => {
+        this.log.debug('Check complete')
       })
   }
 
@@ -322,21 +390,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     } */
 
     this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
-  }
-
-  addUpdateAccessory(): void {
-    if (!this.service) {
-      const uuid = hap.uuid.generate(PLATFORM_NAME)
-      const newAccessory = new Accessory('Plugin Update Check', uuid)
-
-      newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
-
-      this.configureAccessory(newAccessory)
-
-      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
-    }
-
-    this.timer = setTimeout(this.doCheck.bind(this), 10 * 1000)
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {
