@@ -65,6 +65,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
+  private foundUpdates: boolean = false
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -215,7 +216,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   async checkUi(): Promise<number> {
     this.log.debug('Searching for available updates ...')
 
-    const logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
+    let logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
     const updatesAvailable: InstalledPlugin[] = []
 
     if (this.checkHB) {
@@ -224,6 +225,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (homebridge.updateAvailable) {
         updatesAvailable.push(homebridge)
 
+        if (this.foundUpdates === false) logLevel = LogLevel.INFO
         this.log.log(logLevel, `Homebridge update available: ${homebridge.latestVersion}`)
       }
     }
@@ -237,6 +239,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
+
+            if (this.foundUpdates === false) logLevel = LogLevel.INFO
             this.log.log(logLevel, `Homebridge UI update available: ${plugin.latestVersion}`)
           }
         })
@@ -248,6 +252,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
+
+            if (this.foundUpdates === false) logLevel = LogLevel.INFO
             this.log.log(logLevel, `Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
           }
         })
@@ -260,11 +266,14 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (docker.updateAvailable) {
         updatesAvailable.push(docker)
 
+        if (this.foundUpdates === false) logLevel = LogLevel.INFO
         this.log.log(logLevel, `Docker update available: ${docker.latestVersion}`)
       }
     }
 
     this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+
+    this.foundUpdates = updatesAvailable.length > 0
 
     return updatesAvailable.length
   }
