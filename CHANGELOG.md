@@ -2,13 +2,18 @@
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
 
+## [2.3.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.0) (2025-08-18)
+
+### What's Changed
+- Display newer updates in logs
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.2.1...v2.3.0
+
 ## [2.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.2.1) (2025-08-09)
 
 ### What's Changed
 - Change logging to daily
 - Fix log info output
-
-**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.2...v2.2.1
 
 ## [2.1.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.1.0) (2025-08-09)
 
