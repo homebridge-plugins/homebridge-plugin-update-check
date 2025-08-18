@@ -65,7 +65,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
-  private foundUpdates: boolean = false
+
+  private hbUpdates: string[] = []
+  private hbUIUpdates: string[] = []
+  private pluginUpdates: string[] = []
+  private dockerUpdates: string[] = []
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -225,8 +229,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (homebridge.updateAvailable) {
         updatesAvailable.push(homebridge)
 
-        if (this.foundUpdates === false) logLevel = LogLevel.INFO
-        this.log.log(logLevel, `Homebridge update available: ${homebridge.latestVersion}`)
+        const version: string = homebridge.latestVersion
+
+        if (this.hbUpdates.length === 0 || !this.hbUpdates.includes(version)) logLevel = LogLevel.INFO
+        this.log.log(logLevel, `Homebridge update available: ${version}`)
+
+        this.hbUpdates = [version]
       }
     }
 
@@ -234,14 +242,19 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       const plugins = await this.uiApi.getPlugins()
 
       if (this.checkHBUI) {
-        const filteredPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
+        const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
 
-        filteredPlugins.forEach((plugin) => {
-          if (plugin.updateAvailable) {
-            updatesAvailable.push(plugin)
+        // Only one plugin is returned
+        homebridgeUiPlugins.forEach((homebridgeUI) => {
+          if (homebridgeUI.updateAvailable) {
+            updatesAvailable.push(homebridgeUI)
 
-            if (this.foundUpdates === false) logLevel = LogLevel.INFO
-            this.log.log(logLevel, `Homebridge UI update available: ${plugin.latestVersion}`)
+            const version: string = homebridgeUI.latestVersion
+
+            if (this.hbUIUpdates.length === 0 || !this.hbUIUpdates.includes(version)) logLevel = LogLevel.INFO
+            this.log.log(logLevel, `Homebridge UI update available: ${version}`)
+
+            this.hbUIUpdates = [version]
           }
         })
       }
@@ -253,8 +266,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
 
-            if (this.foundUpdates === false) logLevel = LogLevel.INFO
+            const version: string = plugin.latestVersion
+
+            if (this.pluginUpdates.length === 0 || !this.pluginUpdates.includes(version)) logLevel = LogLevel.INFO
             this.log.log(logLevel, `Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
+
+            this.pluginUpdates.push(version)
           }
         })
       }
@@ -266,14 +283,16 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (docker.updateAvailable) {
         updatesAvailable.push(docker)
 
-        if (this.foundUpdates === false) logLevel = LogLevel.INFO
-        this.log.log(logLevel, `Docker update available: ${docker.latestVersion}`)
+        const version: string = docker.latestVersion
+
+        if (this.dockerUpdates.length === 0 || !this.dockerUpdates.includes(version)) logLevel = LogLevel.INFO
+        this.log.log(logLevel, `Docker update available: ${version}`)
+
+        this.dockerUpdates = [version]
       }
     }
 
     this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
-
-    this.foundUpdates = updatesAvailable.length > 0
 
     return updatesAvailable.length
   }
