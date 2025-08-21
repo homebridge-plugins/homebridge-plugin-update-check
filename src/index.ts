@@ -28,6 +28,7 @@ import fs from 'node:fs'
 import { hostname } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { Cron } from 'croner'
 
@@ -150,7 +151,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
     args = [
-      path.resolve(__dirname, '../node_modules/npm-check-updates/build/src/bin/cli.js'),
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../node_modules/npm-check-updates/build/src/bin/cli.js'),
       '--jsonUpgraded',
       '--filter',
       filter,
