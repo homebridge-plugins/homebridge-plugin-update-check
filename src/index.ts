@@ -262,6 +262,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       if (this.checkPlugins) {
         const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
 
+        const tempUpdates: string[] = []
+
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
@@ -271,9 +273,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             if (this.pluginUpdates.length === 0 || !this.pluginUpdates.includes(version)) logLevel = LogLevel.INFO
             this.log.log(logLevel, `Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
 
-            this.pluginUpdates.push(version)
+            tempUpdates.push(version)
           }
         })
+
+        this.pluginUpdates = tempUpdates
       }
     }
 
@@ -292,7 +296,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
     }
 
-    this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+    this.log.log(logLevel, `Available update(s): ${updatesAvailable.length}`)
 
     return updatesAvailable.length
   }
