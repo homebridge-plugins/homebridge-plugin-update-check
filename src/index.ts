@@ -28,6 +28,7 @@ import fs from 'node:fs'
 import { hostname } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { Cron } from 'croner'
 
@@ -188,7 +189,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
     args = [
-      path.resolve(__dirname, '../node_modules/npm-check-updates/build/src/bin/cli.js'),
+      path.resolve(__dirname, '../node_modules/npm-check-updates/build/cli.js'),
       '--jsonUpgraded',
       '--filter',
       filter,
@@ -404,7 +405,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
     }
 
-    this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+    this.log.log(logLevel, `Available update(s): ${updatesAvailable.length}`)
 
     // Check if restart is needed after successful updates
     if (this.autoRestartAfterUpdates && (this.successfulHomebridgeUpdate || this.successfulHBUIUpdate || this.successfulPluginUpdates.length > 0)) {
