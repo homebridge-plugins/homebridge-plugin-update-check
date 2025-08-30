@@ -201,6 +201,43 @@ export class UiApi {
     })
   }
 
+  public async createBackup(): Promise<boolean> {
+    this.log.info('Creating backup before performing updates')
+    
+    try {
+      if (this.isConfigured()) {
+        // Try different possible backup API endpoints
+        const backupEndpoints = [
+          '/api/backup/create',
+          '/api/backups/create', 
+          '/api/backup',
+          '/api/server/backup'
+        ]
+        
+        for (const endpoint of backupEndpoints) {
+          try {
+            await this.makeBackupCall(endpoint)
+            this.log.info(`Backup created successfully via UI API (${endpoint})`)
+            return true
+          } catch (error) {
+            this.log.debug(`Backup endpoint ${endpoint} failed: ${error}`)
+            // Continue to next endpoint
+          }
+        }
+        
+        this.log.warn('All backup endpoints failed - backup creation unavailable')
+        return false
+      } else {
+        this.log.warn('UI API not configured - backup creation skipped')
+        return false
+      }
+    } catch (error) {
+      this.log.warn(`Failed to create backup: ${error}`)
+      this.log.warn('Continuing with updates despite backup failure - ensure you have manual backups in place')
+      return false
+    }
+  }
+
   public async restartHomebridge(): Promise<boolean> {
     this.log.info('Attempting to restart Homebridge to apply updates')
     
@@ -230,6 +267,18 @@ export class UiApi {
         Authorization: `Bearer ${this.getToken()}`,
       },
       httpsAgent: this.httpsAgent,
+    })
+
+    return response.data
+  }
+
+  private async makeBackupCall(apiPath: string): Promise<unknown> {
+    const response = await axios.post(this.baseUrl + apiPath, {}, {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+      httpsAgent: this.httpsAgent,
+      timeout: 60000, // 60 second timeout for backup operations
     })
 
     return response.data

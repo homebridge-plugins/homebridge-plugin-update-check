@@ -86,6 +86,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   // Track failures for notification sensor
   private hasUpdateFailures: boolean = false
 
+  // Track backup creation status
+  private backupCreated: boolean = false
+
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
     Accessory = api.platformAccessory
@@ -159,6 +162,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       },
       async () => {
         this.firstDailyRun = true
+        this.backupCreated = false // Reset backup flag for daily backup creation
         this.log.debug(`Reset "firstDailyRun" to ${this.firstDailyRun}`)
       },
     )
@@ -256,6 +260,16 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     let logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
     const updatesAvailable: InstalledPlugin[] = []
+
+    // Create backup before performing any automatic updates
+    const shouldCreateBackup = this.autoUpdateHB || this.autoUpdateHBUI || this.autoUpdatePlugins
+    if (shouldCreateBackup && !this.backupCreated) {
+      this.log.info('Automatic updates are enabled - creating backup before updates')
+      this.backupCreated = await this.uiApi.createBackup()
+      if (!this.backupCreated) {
+        this.log.warn('Backup creation failed, but continuing with updates. Ensure you have manual backups in place.')
+      }
+    }
 
     if (this.checkHB) {
       const homebridge = await this.uiApi.getHomebridge()
