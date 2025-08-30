@@ -407,15 +407,13 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       // Clear any previous failure state since updates were successful
       this.clearFailureState()
       
-      // Delay restart to allow updates to complete
-      setTimeout(async () => {
-        try {
-          await this.uiApi.restartHomebridge()
-        } catch (error) {
-          this.log.error(`Failed to restart Homebridge: ${error}`)
-          this.setFailureState(`Homebridge restart failed: ${error}`)
-        }
-      }, 10000) // 10 second delay
+      // Restart Homebridge to apply the completed updates
+      try {
+        await this.uiApi.restartHomebridge()
+      } catch (error) {
+        this.log.error(`Failed to restart Homebridge: ${error}`)
+        this.setFailureState(`Homebridge restart failed: ${error}`)
+      }
       
       // Reset tracking variables
       this.successfulHomebridgeUpdate = false
