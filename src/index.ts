@@ -67,6 +67,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoRestartAfterUpdates: boolean
 
   private service?: Service
+  private failureService?: Service
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
@@ -80,6 +81,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private successfulHomebridgeUpdate: boolean = false
   private successfulHBUIUpdate: boolean = false
   private successfulPluginUpdates: string[] = []
+
+  // Track failures for notification sensor
+  private hasUpdateFailures: boolean = false
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -118,6 +122,18 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.configureAccessory(newAccessory)
 
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
+    }
+
+    // Add failure notification sensor if any auto-update features are enabled
+    if (this.hasAutoUpdateEnabled() && !this.failureService) {
+      const failureUuid = hap.uuid.generate(PLATFORM_NAME + '_failure')
+      const failureAccessory = new Accessory('Update/Restart Failure', failureUuid)
+
+      failureAccessory.addService(hap.Service.LeakSensor)
+
+      this.configureFailureAccessory(failureAccessory)
+
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [failureAccessory])
     }
 
     setTimeout(() => {
@@ -260,9 +276,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
               this.successfulHomebridgeUpdate = true
             } else {
               this.log.warn(`Failed to initiate Homebridge update to ${version}`)
+              this.setFailureState('Homebridge update failed')
             }
           } catch (error) {
             this.log.error(`Error during automatic Homebridge update: ${error}`)
+            this.setFailureState(`Homebridge update error: ${error}`)
           }
         } else if (this.autoUpdateHB && this.useNcu && !this.allowDirectNpmUpdates) {
           this.log.warn('Automatic updates require either homebridge-config-ui-x to be available or "allowDirectNpmUpdates" to be enabled')
@@ -298,9 +316,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
                   this.successfulHBUIUpdate = true
                 } else {
                   this.log.warn(`Failed to initiate Homebridge UI update to ${version}`)
+                  this.setFailureState('Homebridge UI update failed')
                 }
               } catch (error) {
                 this.log.error(`Error during automatic Homebridge UI update: ${error}`)
+                this.setFailureState(`Homebridge UI update error: ${error}`)
               }
             } else if (this.autoUpdateHBUI && this.useNcu && !this.allowDirectNpmUpdates) {
               this.log.warn('Automatic updates require either homebridge-config-ui-x to be available or "allowDirectNpmUpdates" to be enabled')
@@ -335,9 +355,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
                   this.successfulPluginUpdates.push(plugin.name)
                 } else {
                   this.log.warn(`Failed to initiate plugin update: ${plugin.name} to ${version}`)
+                  this.setFailureState(`Plugin update failed: ${plugin.name}`)
                 }
               } catch (error) {
                 this.log.error(`Error during automatic plugin update for ${plugin.name}: ${error}`)
+                this.setFailureState(`Plugin update error for ${plugin.name}: ${error}`)
               }
             } else if (this.autoUpdatePlugins && this.useNcu && !this.allowDirectNpmUpdates) {
               this.log.warn('Automatic updates require either homebridge-config-ui-x to be available or "allowDirectNpmUpdates" to be enabled')
@@ -380,12 +402,16 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       
       this.log.info(`Updated components: ${updatedComponents.join(', ')}`)
       
+      // Clear any previous failure state since updates were successful
+      this.clearFailureState()
+      
       // Delay restart to allow updates to complete
       setTimeout(async () => {
         try {
           await this.uiApi.restartHomebridge()
         } catch (error) {
           this.log.error(`Failed to restart Homebridge: ${error}`)
+          this.setFailureState(`Homebridge restart failed: ${error}`)
         }
       }, 10000) // 10 second delay
       
@@ -519,6 +545,48 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     } */
 
     this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
+  }
+
+  configureFailureAccessory(accessory: PlatformAccessory): void {
+    accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
+      this.log(`${accessory.displayName} identify requested!`)
+    })
+
+    const accInfo = accessory.getService(hap.Service.AccessoryInformation)
+    if (accInfo) {
+      accInfo
+        .setCharacteristic(hap.Characteristic.Manufacturer, 'Homebridge')
+        .setCharacteristic(hap.Characteristic.Model, 'Update/Restart Failure Monitor')
+        .setCharacteristic(hap.Characteristic.SerialNumber, hostname())
+    }
+
+    this.failureService = accessory.getService(hap.Service.LeakSensor)
+    if (!this.failureService) {
+      this.failureService = accessory.addService(hap.Service.LeakSensor)
+    }
+
+    // Initialize in no-failure state
+    this.failureService.setCharacteristic(hap.Characteristic.LeakDetected, 0)
+  }
+
+  hasAutoUpdateEnabled(): boolean {
+    return this.autoUpdateHB || this.autoUpdateHBUI || this.autoUpdatePlugins
+  }
+
+  setFailureState(reason: string): void {
+    if (this.hasAutoUpdateEnabled() && this.failureService) {
+      this.log.warn(`Update/restart failure detected: ${reason}`)
+      this.hasUpdateFailures = true
+      this.failureService.setCharacteristic(hap.Characteristic.LeakDetected, 1)
+    }
+  }
+
+  clearFailureState(): void {
+    if (this.hasAutoUpdateEnabled() && this.failureService && this.hasUpdateFailures) {
+      this.log.info('Clearing update/restart failure state')
+      this.hasUpdateFailures = false
+      this.failureService.setCharacteristic(hap.Characteristic.LeakDetected, 0)
+    }
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {
