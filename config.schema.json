@@ -122,6 +122,55 @@
         "type": "boolean",
         "description": "Automatically restart Homebridge after successful automatic updates to apply changes",
         "default": false
+      },
+      "failureSensorType": {
+        "title": "Failure Sensor Type",
+        "type": "string",
+        "required": false,
+        "default": "motion",
+        "description": "What type of sensor will be used for update/restart failure notifications (only shown when auto-updates are enabled).",
+        "oneOf": [
+          {
+            "title": "Motion Sensor",
+            "enum": ["motion"]
+          },
+          {
+            "title": "Contact Sensor",
+            "enum": ["contact"]
+          },
+          {
+            "title": "Occupancy Sensor",
+            "enum": ["occupancy"]
+          },
+          {
+            "title": "Humidity Sensor",
+            "enum": ["humidity"]
+          },
+          {
+            "title": "Light Sensor",
+            "enum": ["light"]
+          },
+          {
+            "title": "Air Quality Sensor",
+            "enum": ["air"]
+          },
+          {
+            "title": "Leak Sensor",
+            "enum": ["leak"]
+          },
+          {
+            "title": "Smoke Sensor",
+            "enum": ["smoke"]
+          },
+          {
+            "title": "Carbon Dioxide Sensor",
+            "enum": ["dioxide"]
+          },
+          {
+            "title": "Carbon Monoxide Sensor",
+            "enum": ["monoxide"]
+          }
+        ]
       }
     }
   }

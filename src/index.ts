@@ -56,6 +56,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
+  private readonly failureSensorInfo: SensorInfo
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
@@ -97,6 +98,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
+    this.failureSensorInfo = this.getSensorInfo(this.config.failureSensorType || 'motion')
 
     this.checkHB = this.config.checkHomebridgeUpdates ?? false
     this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
@@ -129,7 +131,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       const failureUuid = hap.uuid.generate(PLATFORM_NAME + '_failure')
       const failureAccessory = new Accessory('Update/Restart Failure', failureUuid)
 
-      failureAccessory.addService(hap.Service.LeakSensor)
+      failureAccessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
 
       this.configureFailureAccessory(failureAccessory)
 
@@ -560,13 +562,13 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         .setCharacteristic(hap.Characteristic.SerialNumber, hostname())
     }
 
-    this.failureService = accessory.getService(hap.Service.LeakSensor)
+    this.failureService = accessory.getService(this.failureSensorInfo.serviceType)
     if (!this.failureService) {
-      this.failureService = accessory.addService(hap.Service.LeakSensor)
+      this.failureService = accessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
     }
 
     // Initialize in no-failure state
-    this.failureService.setCharacteristic(hap.Characteristic.LeakDetected, 0)
+    this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, this.failureSensorInfo.untrippedValue)
   }
 
   hasAutoUpdateEnabled(): boolean {
@@ -577,7 +579,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (this.hasAutoUpdateEnabled() && this.failureService) {
       this.log.warn(`Update/restart failure detected: ${reason}`)
       this.hasUpdateFailures = true
-      this.failureService.setCharacteristic(hap.Characteristic.LeakDetected, 1)
+      this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, this.failureSensorInfo.trippedValue)
     }
   }
 
@@ -585,7 +587,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (this.hasAutoUpdateEnabled() && this.failureService && this.hasUpdateFailures) {
       this.log.info('Clearing update/restart failure state')
       this.hasUpdateFailures = false
-      this.failureService.setCharacteristic(hap.Characteristic.LeakDetected, 0)
+      this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, this.failureSensorInfo.untrippedValue)
     }
   }
 
