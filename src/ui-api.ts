@@ -201,6 +201,40 @@ export class UiApi {
     })
   }
 
+  public async restartHomebridge(): Promise<boolean> {
+    this.log.info('Attempting to restart Homebridge to apply updates')
+    
+    try {
+      if (this.isConfigured()) {
+        // Use UI API to restart if available
+        await this.makeRestartCall('/api/server/restart')
+        this.log.info('Homebridge restart initiated via UI API')
+        return true
+      } else {
+        // Fallback: exit process to trigger restart by process manager
+        this.log.info('UI API not available, triggering process exit for restart')
+        setTimeout(() => {
+          process.exit(0)
+        }, 5000) // 5 second delay to allow log message to be written
+        return true
+      }
+    } catch (error) {
+      this.log.error(`Failed to restart Homebridge: ${error}`)
+      return false
+    }
+  }
+
+  private async makeRestartCall(apiPath: string): Promise<unknown> {
+    const response = await axios.post(this.baseUrl + apiPath, {}, {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+      httpsAgent: this.httpsAgent,
+    })
+
+    return response.data
+  }
+
   private async makeDockerCall(apiPath: string): Promise<any> {
     const response = await axios.get(this.dockerUrl + apiPath, {
       httpsAgent: this.httpsAgent,

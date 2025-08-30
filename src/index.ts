@@ -64,6 +64,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoUpdateHBUI: boolean
   private readonly autoUpdatePlugins: boolean
   private readonly allowDirectNpmUpdates: boolean
+  private readonly autoRestartAfterUpdates: boolean
 
   private service?: Service
 
@@ -74,6 +75,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private hbUIUpdates: string[] = []
   private pluginUpdates: string[] = []
   private dockerUpdates: string[] = []
+
+  // Track successful updates for restart logic
+  private successfulHomebridgeUpdate: boolean = false
+  private successfulHBUIUpdate: boolean = false
+  private successfulPluginUpdates: string[] = []
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -97,6 +103,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.autoUpdateHBUI = this.config.autoUpdateHomebridgeUI ?? false
     this.autoUpdatePlugins = this.config.autoUpdatePlugins ?? false
     this.allowDirectNpmUpdates = this.config.allowDirectNpmUpdates ?? false
+    this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -250,6 +257,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             const success = await this.uiApi.updateHomebridge(version)
             if (success) {
               this.log.info(`Successfully initiated Homebridge update to ${version}`)
+              this.successfulHomebridgeUpdate = true
             } else {
               this.log.warn(`Failed to initiate Homebridge update to ${version}`)
             }
@@ -287,6 +295,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
                 const success = await this.uiApi.updatePlugin('homebridge-config-ui-x', version)
                 if (success) {
                   this.log.info(`Successfully initiated Homebridge UI update to ${version}`)
+                  this.successfulHBUIUpdate = true
                 } else {
                   this.log.warn(`Failed to initiate Homebridge UI update to ${version}`)
                 }
@@ -323,6 +332,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
                 const success = await this.uiApi.updatePlugin(plugin.name, version)
                 if (success) {
                   this.log.info(`Successfully initiated plugin update: ${plugin.name} to ${version}`)
+                  this.successfulPluginUpdates.push(plugin.name)
                 } else {
                   this.log.warn(`Failed to initiate plugin update: ${plugin.name} to ${version}`)
                 }
@@ -357,6 +367,33 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     }
 
     this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+
+    // Check if restart is needed after successful updates
+    if (this.autoRestartAfterUpdates && (this.successfulHomebridgeUpdate || this.successfulHBUIUpdate || this.successfulPluginUpdates.length > 0)) {
+      this.log.info('Successful updates detected, preparing to restart Homebridge...')
+      
+      // List what was updated
+      const updatedComponents: string[] = []
+      if (this.successfulHomebridgeUpdate) updatedComponents.push('Homebridge')
+      if (this.successfulHBUIUpdate) updatedComponents.push('Homebridge UI')
+      if (this.successfulPluginUpdates.length > 0) updatedComponents.push(`plugins: ${this.successfulPluginUpdates.join(', ')}`)
+      
+      this.log.info(`Updated components: ${updatedComponents.join(', ')}`)
+      
+      // Delay restart to allow updates to complete
+      setTimeout(async () => {
+        try {
+          await this.uiApi.restartHomebridge()
+        } catch (error) {
+          this.log.error(`Failed to restart Homebridge: ${error}`)
+        }
+      }, 10000) // 10 second delay
+      
+      // Reset tracking variables
+      this.successfulHomebridgeUpdate = false
+      this.successfulHBUIUpdate = false
+      this.successfulPluginUpdates = []
+    }
 
     return updatesAvailable.length
   }

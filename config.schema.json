@@ -116,6 +116,12 @@
         "type": "boolean",
         "description": "Allow automatic updates using direct npm commands even when homebridge-config-ui-x is not available (requires sufficient npm privileges)",
         "default": false
+      },
+      "autoRestartAfterUpdates": {
+        "title": "Auto-restart after updates",
+        "type": "boolean",
+        "description": "Automatically restart Homebridge after successful automatic updates to apply changes",
+        "default": false
       }
     }
   }
