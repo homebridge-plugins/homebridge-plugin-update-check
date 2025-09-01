@@ -51,22 +51,6 @@ interface SensorInfo {
   untrippedValue: CharacteristicValue
 }
 
-function ensureNcuInstalled() {
-  // Check if ncu is available
-  const check = spawnSync('ncu', ['--version'], { encoding: 'utf8' });
-
-  if (check.error || check.status !== 0) {
-    console.log('npm-check-updates (ncu) not found. Installing globally...');
-    const install = spawnSync('npm', ['install', '-g', 'npm-check-updates'], { stdio: 'inherit' });
-    if (install.error || install.status !== 0) {
-      throw new Error('Failed to install npm-check-updates globally. Please install it manually.');
-    }
-    console.log('npm-check-updates installed successfully.');
-  } else {
-    console.log('npm-check-updates (ncu) is already installed.');
-  }
-}
-
 class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly log: Logging
   private readonly api: API
@@ -206,7 +190,21 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     )
   }
 
-  ensureNcuInstalled();
+  async ensureNcuInstalled() {
+    // Check if ncu is available
+    const check = spawnSync('ncu', ['--version'], { encoding: 'utf8' });
+
+    if (check.error || check.status !== 0) {
+      console.log('npm-check-updates (ncu) not found. Installing globally...');
+      const install = spawnSync('npm', ['install', '-g', 'npm-check-updates'], { stdio: 'inherit' });
+      if (install.error || install.status !== 0) {
+        throw new Error('Failed to install npm-check-updates globally. Please install it manually.');
+      }
+      console.log('npm-check-updates installed successfully.');
+    } else {
+      console.log('npm-check-updates (ncu) is already installed.');
+    }
+  }  
 
   // Use global 'ncu' instead of local path
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
