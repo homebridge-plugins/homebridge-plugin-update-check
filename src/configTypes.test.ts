@@ -26,14 +26,32 @@ describe('pluginUpdatePlatformConfig', () => {
     expect(config.sensorType).toBe('temperature')
   })
 
+  it('should allow optional initialCheckDelay property', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      initialCheckDelay: 30,
+    }
+    expect(config.initialCheckDelay).toBe(30)
+  })
+
   it('should allow all properties to be set', () => {
     const config: PluginUpdatePlatformConfig = {
       platform: 'ExamplePlatform',
       forceNcu: true,
       sensorType: 'humidity',
+      checkHomebridgeUpdates: true,
+      checkHomebridgeUIUpdates: true,
+      checkPluginUpdates: true,
+      checkDockerUpdates: true,
+      initialCheckDelay: 15,
     }
     expect(config.platform).toBe('ExamplePlatform')
     expect(config.forceNcu).toBe(true)
     expect(config.sensorType).toBe('humidity')
+    expect(config.checkHomebridgeUpdates).toBe(true)
+    expect(config.checkHomebridgeUIUpdates).toBe(true)
+    expect(config.checkPluginUpdates).toBe(true)
+    expect(config.checkDockerUpdates).toBe(true)
+    expect(config.initialCheckDelay).toBe(15)
   })
 })
