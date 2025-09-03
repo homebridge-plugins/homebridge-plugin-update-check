@@ -54,7 +54,7 @@
     "package.json"
   ],
   "engines": {
-    "homebridge": "^1.8.5 || ^2.0.0 || ^2.0.0-beta.23 || ^2.0.0-alpha.37",
+    "homebridge": "^1.8.5 || ^2.0.0 || ^2.0.0-beta.29 || ^2.0.0-alpha.38",
     "node": "^20 || ^22"
   },
   "scripts": {
@@ -67,7 +67,7 @@
     "prepublishOnly": "npm run lint && npm run build && npm run plugin-ui && npm run docs && npm run docs:lint",
     "postpublish": "npm run clean && npm ci",
     "clean": "shx rm -rf ./dist",
-    "test": "npm install",
+    "test": "vitest run",
     "test:watch": "vitest watch",
     "test-coverage": "npm run test -- --coverage",
     "docs": "typedoc",
@@ -78,28 +78,28 @@
     "axios": "^1.11.0",
     "croner": "^9.1.0",
     "jsonwebtoken": "^9.0.2",
-    "npm-check-updates": "^18.0.2"
+    "npm-check-updates": "^18.0.3"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^5.2.0",
+    "@antfu/eslint-config": "^5.2.1",
     "@types/aes-js": "^3.1.4",
     "@types/debug": "^4.1.12",
     "@types/fs-extra": "^11.0.4",
     "@types/mdast": "^4.0.4",
-    "@types/node": "^24.2.1",
-    "@types/semver": "^7.7.0",
+    "@types/node": "^24.3.0",
+    "@types/semver": "^7.7.1",
     "@types/source-map-support": "^0.5.10",
     "@vitest/coverage-v8": "^3.2.4",
     "ajv": "^8.17.1",
-    "eslint": "^9.33.0",
+    "eslint": "^9.34.0",
     "eslint-plugin-format": "^1.0.1",
     "eslint-plugin-import": "^2.32.0",
     "homebridge": "^1.11.0",
-    "homebridge-config-ui-x": "5.4.1",
+    "homebridge-config-ui-x": "5.5.0",
     "nodemon": "^3.1.10",
     "shx": "^0.4.0",
     "ts-node": "^10.9.2",
-    "typedoc": "^0.28.9",
+    "typedoc": "^0.28.12",
     "typescript": "^5.9.2",
     "vitest": "^3.0.7"
   }

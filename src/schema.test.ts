@@ -14,7 +14,7 @@ describe('config schema validation', () => {
     const schemaContent = fs.readFileSync(schemaPath, 'utf8')
     const fullSchema = JSON.parse(schemaContent)
     schema = fullSchema.schema
-    
+
     ajv = new Ajv()
   })
 
@@ -27,54 +27,54 @@ describe('config schema validation', () => {
         'Plugin_Update',
         'Update123',
         'My Plugin Name',
-        'Plugin-Update_V2 Test'
+        'Plugin-Update_V2 Test',
       ]
 
-      validNames.forEach(name => {
+      validNames.forEach((name) => {
         const config = {
           name,
           sensorType: 'motion',
-          platform: 'PluginUpdate'
+          platform: 'PluginUpdate',
         }
-        
+
         const validate = ajv.compile(schema)
         const valid = validate(config)
-        
+
         expect(valid, `Expected "${name}" to be valid, but got errors: ${JSON.stringify(validate.errors)}`).toBe(true)
       })
     })
 
     it('should reject names with periods and other invalid characters', () => {
       const invalidNames = [
-        'Plugin Update V2.0',  // Period - the reported issue
-        'Plugin.Update',       // Period
-        'Plugin@Update',       // @ symbol
-        'Plugin#Update',       // # symbol
-        'Plugin$Update',       // $ symbol
-        'Plugin%Update',       // % symbol
-        'Plugin&Update',       // & symbol
-        'Plugin*Update',       // * symbol
-        'Plugin+Update',       // + symbol
-        'Plugin=Update',       // = symbol
-        'Plugin/Update',       // / symbol
-        'Plugin\\Update',      // \ symbol
-        'Plugin|Update',       // | symbol
-        'Plugin<Update>',      // < > symbols
-        'Plugin[Update]',      // [ ] symbols
-        'Plugin{Update}',      // { } symbols
-        'Plugin(Update)',      // ( ) symbols
+        'Plugin Update V2.0', // Period - the reported issue
+        'Plugin.Update', // Period
+        'Plugin@Update', // @ symbol
+        'Plugin#Update', // # symbol
+        'Plugin$Update', // $ symbol
+        'Plugin%Update', // % symbol
+        'Plugin&Update', // & symbol
+        'Plugin*Update', // * symbol
+        'Plugin+Update', // + symbol
+        'Plugin=Update', // = symbol
+        'Plugin/Update', // / symbol
+        'Plugin\\Update', // \ symbol
+        'Plugin|Update', // | symbol
+        'Plugin<Update>', // < > symbols
+        'Plugin[Update]', // [ ] symbols
+        'Plugin{Update}', // { } symbols
+        'Plugin(Update)', // ( ) symbols
       ]
 
-      invalidNames.forEach(name => {
+      invalidNames.forEach((name) => {
         const config = {
           name,
           sensorType: 'motion',
-          platform: 'PluginUpdate'
+          platform: 'PluginUpdate',
         }
-        
+
         const validate = ajv.compile(schema)
         const valid = validate(config)
-        
+
         expect(valid, `Expected "${name}" to be invalid, but validation passed`).toBe(false)
       })
     })
@@ -83,12 +83,12 @@ describe('config schema validation', () => {
       const config = {
         name: '',
         sensorType: 'motion',
-        platform: 'PluginUpdate'
+        platform: 'PluginUpdate',
       }
-      
+
       const validate = ajv.compile(schema)
       const valid = validate(config)
-      
+
       expect(valid).toBe(false)
     })
 
@@ -97,12 +97,12 @@ describe('config schema validation', () => {
       const config = {
         name: longName,
         sensorType: 'motion',
-        platform: 'PluginUpdate'
+        platform: 'PluginUpdate',
       }
-      
+
       const validate = ajv.compile(schema)
       const valid = validate(config)
-      
+
       expect(valid).toBe(false)
     })
 
@@ -111,12 +111,12 @@ describe('config schema validation', () => {
       const config = {
         name: maxLengthName,
         sensorType: 'motion',
-        platform: 'PluginUpdate'
+        platform: 'PluginUpdate',
       }
-      
+
       const validate = ajv.compile(schema)
       const valid = validate(config)
-      
+
       expect(valid).toBe(true)
     })
   })

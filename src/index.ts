@@ -23,20 +23,15 @@ import {
 
 import type { PluginUpdatePlatformConfig } from './configTypes.js'
 
-import { spawnSync, spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import { hostname } from 'node:os'
-import path from 'node:path'
 import process from 'node:process'
-import { fileURLToPath } from 'node:url'
 
 import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
 import { InstalledPlugin, UiApi } from './ui-api.js'
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 let hap: HAP
 let Accessory: typeof PlatformAccessory
@@ -135,8 +130,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     // Add failure notification sensor if any auto-update features are enabled
     if (this.hasAutoUpdateEnabled() && !this.failureService) {
-      const failureUuid = hap.uuid.generate(PLATFORM_NAME + '_failure')
-      const failureAccessory = new Accessory('Update/Restart Failure', failureUuid)
+      const failureUuid = hap.uuid.generate(`${PLATFORM_NAME}_failure`)
+      const failureAccessory = new Accessory('Update or Restart Failure Sensor', failureUuid)
 
       failureAccessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
 
@@ -192,19 +187,19 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   async ensureNcuInstalled() {
     // Check if ncu is available
-    const check = spawnSync('ncu', ['--version'], { encoding: 'utf8' });
+    const check = spawnSync('ncu', ['--version'], { encoding: 'utf8' })
 
     if (check.error || check.status !== 0) {
-      console.log('npm-check-updates (ncu) not found. Installing globally...');
-      const install = spawnSync('npm', ['install', '-g', 'npm-check-updates'], { stdio: 'inherit' });
+      this.log.warn('npm-check-updates (ncu) not found. Installing globally...')
+      const install = spawnSync('npm', ['install', '-g', 'npm-check-updates'], { stdio: 'inherit' })
       if (install.error || install.status !== 0) {
-        throw new Error('Failed to install npm-check-updates globally. Please install it manually.');
+        throw new Error('Failed to install npm-check-updates globally. Please install it manually.')
       }
-      console.log('npm-check-updates installed successfully.');
+      this.log.info('npm-check-updates installed successfully.')
     } else {
-      console.log('npm-check-updates (ncu) is already installed.');
+      this.log.debug('npm-check-updates (ncu) is already installed.')
     }
-  }  
+  }
 
   // Use global 'ncu' instead of local path
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
@@ -429,18 +424,18 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     // Check if restart is needed after successful updates
     if (this.autoRestartAfterUpdates && (this.successfulHomebridgeUpdate || this.successfulHBUIUpdate || this.successfulPluginUpdates.length > 0)) {
       this.log.info('Successful updates detected, preparing to restart Homebridge...')
-      
+
       // List what was updated
       const updatedComponents: string[] = []
       if (this.successfulHomebridgeUpdate) updatedComponents.push('Homebridge')
       if (this.successfulHBUIUpdate) updatedComponents.push('Homebridge UI')
       if (this.successfulPluginUpdates.length > 0) updatedComponents.push(`plugins: ${this.successfulPluginUpdates.join(', ')}`)
-      
+
       this.log.info(`Updated components: ${updatedComponents.join(', ')}`)
-      
+
       // Clear any previous failure state since updates were successful
       this.clearFailureState()
-      
+
       // Restart Homebridge to apply the completed updates
       try {
         await this.uiApi.restartHomebridge()
@@ -448,7 +443,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         this.log.error(`Failed to restart Homebridge: ${error}`)
         this.setFailureState(`Homebridge restart failed: ${error}`)
       }
-      
+
       // Reset tracking variables
       this.successfulHomebridgeUpdate = false
       this.successfulHBUIUpdate = false
@@ -589,7 +584,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (accInfo) {
       accInfo
         .setCharacteristic(hap.Characteristic.Manufacturer, 'Homebridge')
-        .setCharacteristic(hap.Characteristic.Model, 'Update/Restart Failure Monitor')
+        .setCharacteristic(hap.Characteristic.Model, 'Update or Restart Failure Monitor')
         .setCharacteristic(hap.Characteristic.SerialNumber, hostname())
     }
 
