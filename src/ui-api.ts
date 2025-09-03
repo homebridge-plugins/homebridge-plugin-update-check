@@ -176,11 +176,11 @@ export class UiApi {
         let stdout = ''
         let stderr = ''
         
-        npm.stdout.on('data', (chunk: any) => {
+        npm.stdout.on('data', (chunk: Buffer) => {
           stdout += chunk.toString()
         })
         
-        npm.stderr.on('data', (chunk: any) => {
+        npm.stderr.on('data', (chunk: Buffer) => {
           stderr += chunk.toString()
         })
         
