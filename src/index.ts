@@ -149,16 +149,25 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
-    args = [
-      path.resolve(__dirname, '../node_modules/npm-check-updates/build/src/bin/cli.js'),
-      '--jsonUpgraded',
-      '--filter',
-      filter,
-    ].concat(args)
+    // Try local npm-check-updates installation first
+    const localNcuPath = path.resolve(__dirname, '../node_modules/npm-check-updates/build/cli.js')
+    let ncuCommand: string = process.argv0
+    let ncuArgs: string[] = []
+
+    if (fs.existsSync(localNcuPath)) {
+      // Use local installation
+      this.log.debug(`Using local npm-check-updates at: ${localNcuPath}`)
+      ncuArgs = [localNcuPath, '--jsonUpgraded', '--filter', filter].concat(args)
+    } else {
+      // Fallback to global ncu command
+      this.log.debug('Local npm-check-updates not found, trying global ncu command')
+      ncuCommand = 'ncu'
+      ncuArgs = ['--jsonUpgraded', '--filter', filter].concat(args)
+    }
 
     const output = await new Promise<string>((resolve, reject) => {
       try {
-        const ncu = spawn(process.argv0, args, {
+        const ncu = spawn(ncuCommand, ncuArgs, {
           env: this.isDocker ? { ...process.env, HOME: '/homebridge' } : undefined,
         })
         let stdout = ''
@@ -169,12 +178,19 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         ncu.stderr.on('data', (chunk: any) => {
           stderr += chunk.toString()
         })
-        ncu.on('close', () => {
-          if (stderr) {
-            reject(stderr)
+        ncu.on('close', (code) => {
+          if (code !== 0 || stderr) {
+            const errorMsg = `npm-check-updates failed with exit code ${code}: ${stderr}`
+            this.log.error(errorMsg)
+            reject(new Error(errorMsg))
           } else {
             resolve(stdout)
           }
+        })
+        ncu.on('error', (error) => {
+          const errorMsg = `Failed to run npm-check-updates: ${error.message}. Ensure npm-check-updates is installed locally or globally as 'ncu'.`
+          this.log.error(errorMsg)
+          reject(new Error(errorMsg))
         })
       } catch (ex) {
         reject(ex)
