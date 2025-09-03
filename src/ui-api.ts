@@ -243,9 +243,30 @@ export class UiApi {
     
     try {
       if (this.isConfigured()) {
-        // Use UI API to restart if available
-        await this.makeRestartCall('/api/server/restart')
-        this.log.info('Homebridge restart initiated via UI API')
+        // Try different restart endpoints with fallback strategy
+        const restartEndpoints = [
+          '/api/server/restart',
+          '/api/platform-tools/docker/restart-container',
+          '/api/platform-tools/linux/restart-host'
+        ]
+        
+        for (const endpoint of restartEndpoints) {
+          try {
+            await this.makeRestartCall(endpoint)
+            this.log.info(`Homebridge restart initiated via UI API (${endpoint})`)
+            return true
+          } catch (error) {
+            this.log.debug(`Restart endpoint ${endpoint} failed: ${error}`)
+            // Continue to next endpoint
+          }
+        }
+        
+        this.log.warn('All restart endpoints failed - UI API restart unavailable')
+        // Fallback: exit process to trigger restart by process manager
+        this.log.info('Falling back to process exit for restart')
+        setTimeout(() => {
+          process.exit(0)
+        }, 5000) // 5 second delay to allow log message to be written
         return true
       } else {
         // Fallback: exit process to trigger restart by process manager
@@ -262,7 +283,7 @@ export class UiApi {
   }
 
   private async makeRestartCall(apiPath: string): Promise<unknown> {
-    const response = await axios.post(this.baseUrl + apiPath, {}, {
+    const response = await axios.put(this.baseUrl + apiPath, {}, {
       headers: {
         Authorization: `Bearer ${this.getToken()}`,
       },
