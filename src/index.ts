@@ -26,8 +26,6 @@ import type { PluginUpdatePlatformConfig } from './configTypes.js'
 import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import { hostname } from 'node:os'
-import process from 'node:process'
-
 import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
