@@ -12,14 +12,15 @@
       "name": {
         "title": "Name",
         "type": "string",
-        "required": true,
         "default": "Plugin Update",
-        "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit."
+        "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit. Can only contain letters, numbers, spaces, hyphens, and underscores. Periods and other special characters are not allowed as they can cause HomeKit pairing issues.",
+        "pattern": "^[a-zA-Z0-9\\s_-]+$",
+        "minLength": 1,
+        "maxLength": 64
       },
       "sensorType": {
         "title": "Sensor Type",
         "type": "string",
-        "required": true,
         "default": "motion",
         "description": "What type of sensor will be exposed to HomeKit.",
         "oneOf": [
@@ -93,6 +94,7 @@
         "type": "boolean",
         "description": "Force use of node-check-updates instead of homebridge-config-ui-x"
       }
-    }
+    },
+    "required": ["name", "sensorType"]
   }
 }
