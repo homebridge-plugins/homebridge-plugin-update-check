@@ -127,7 +127,6 @@
       "failureSensorType": {
         "title": "Failure Sensor Type",
         "type": "string",
-        "required": false,
         "default": "motion",
         "description": "What type of sensor will be used for update/restart failure notifications (only shown when auto-updates are enabled).",
         "oneOf": [
