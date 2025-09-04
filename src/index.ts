@@ -44,6 +44,8 @@ let Accessory: typeof PlatformAccessory
 
 const PLUGIN_NAME = '@homebridge-plugins/homebridge-plugin-update-check'
 const PLATFORM_NAME = 'PluginUpdate'
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface SensorInfo {
   serviceType: WithUUID<typeof Service>
@@ -231,7 +233,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (this.checkPlugins) filters.push(pluginsFilter)
 
     // eslint-disable-next-line prefer-template
-    const filter = '/^' + filters.join('|') + ')$/'
+    const filter = '/^(' + filters.join('|') + ')$/'
 
     let results = await this.runNcu(['--global'], filter)
 
