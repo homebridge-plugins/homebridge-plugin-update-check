@@ -31,9 +31,42 @@ describe('pluginUpdatePlatformConfig', () => {
       platform: 'ExamplePlatform',
       forceNcu: true,
       sensorType: 'humidity',
+      checkHomebridgeUpdates: true,
+      checkHomebridgeUIUpdates: true,
+      checkPluginUpdates: true,
+      checkDockerUpdates: false,
+      autoUpdateHomebridge: true,
+      autoUpdateHomebridgeUI: false,
+      autoUpdatePlugins: true,
+      allowDirectNpmUpdates: false,
     }
     expect(config.platform).toBe('ExamplePlatform')
     expect(config.forceNcu).toBe(true)
     expect(config.sensorType).toBe('humidity')
+    expect(config.checkHomebridgeUpdates).toBe(true)
+    expect(config.autoUpdateHomebridge).toBe(true)
+    expect(config.autoUpdateHomebridgeUI).toBe(false)
+    expect(config.autoUpdatePlugins).toBe(true)
+    expect(config.allowDirectNpmUpdates).toBe(false)
+  })
+
+  it('should allow auto-update properties to be set independently', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      autoUpdateHomebridge: true,
+      autoUpdateHomebridgeUI: false,
+      autoUpdatePlugins: true,
+    }
+    expect(config.autoUpdateHomebridge).toBe(true)
+    expect(config.autoUpdateHomebridgeUI).toBe(false)
+    expect(config.autoUpdatePlugins).toBe(true)
+  })
+
+  it('should allow allowDirectNpmUpdates property to be set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      allowDirectNpmUpdates: true,
+    }
+    expect(config.allowDirectNpmUpdates).toBe(true)
   })
 })

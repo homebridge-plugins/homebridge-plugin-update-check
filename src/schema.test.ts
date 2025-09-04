@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import type { Ajv } from 'ajv'
 import AjvCreate from 'ajv'
+import Ajv from 'ajv'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 describe('config schema validation', () => {
@@ -17,6 +18,7 @@ describe('config schema validation', () => {
     schema = fullSchema.schema
 
     ajv = new AjvCreate()
+    ajv = new Ajv()
   })
 
   describe('name field validation', () => {

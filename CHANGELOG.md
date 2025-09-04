@@ -1,3 +1,21 @@
+## [2.3.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.1) (2025-09-03)
+
+### What's Changed
+- Merge branch 'latest' into beta-2.3.1 ([f30d910](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/f30d91080dd11fecafc84275bd078ce30e15fe2d))
+- Fix NCU filter regex construction to detect plugin updates correctly (#92) ([32733d8](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/32733d889fc9bdcf0d58f279f387b105a36bfc06))
+- v2.3.1 ([c6b1af1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/c6b1af1844f90520bb9217171d6117c6425f58d9))
+- Fix Homebridge restart failure: use PUT method and implement endpoint fallback (#101) ([feb32be](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/feb32befefd97a5f87155ca95f58ebb105a83471))
+- Add name validation to prevent HomeKit pairing issues with child bridges (#91) ([4db28af](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/4db28afd90f4f5c21c10579d8d0da08e022ea8f6))
+- Patch ncu (#99) ([d3b7a3f](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/d3b7a3f5326142f1aa54a6d5247546e6803d8b48))
+- Parenthesis & patch ncu (#98) ([7796773](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/7796773d376e3ff936a9724109125fc1c671dd7f))
+- resolve __dirname is not defined (#97) ([c295a20](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/c295a20962e982b449bd1296b0b02708e1fde058))
+- Add automatic update functionality with configurable npm support, restart capability, automatic backup creation, and configurable failure notifications for Homebridge, UI, and plugins (#94) ([e58b488](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/e58b488edf02eccf801627314107a70f08c36693))
+- Fix npm-check-updates CLI path for v16+ compatibility (#96) ([acf607c](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/acf607c9cd5944eb418b88a8465744cb942d1460))
+- Update available update list (#89) ([bd84b83](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/bd84b83556c3bffdac0d35f15e1047f7c54e8887))
+- Fix ReferenceError: __dirname is not defined in ESM module (#86) ([5668b01](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/5668b015900d708bbeb4a38d82fac14a7215f022))
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.0...v2.3.1
+
 # Changelog
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
