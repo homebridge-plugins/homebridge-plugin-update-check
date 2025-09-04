@@ -96,6 +96,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.checkDocker = this.config.checkDockerUpdates ?? false
     this.initialCheckDelay = this.config.initialCheckDelay ?? 10
 
+    this.autoUpdateHB = this.config.autoUpdateHomebridge ?? false
+    this.autoUpdateHBUI = this.config.autoUpdateHomebridgeUI ?? false
+    this.autoUpdatePlugins = this.config.autoUpdatePlugins ?? false
+    this.allowDirectNpmUpdates = this.config.allowDirectNpmUpdates ?? false
+    this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
+
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
