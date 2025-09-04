@@ -9,4 +9,10 @@ export interface PluginUpdatePlatformConfig {
   checkPluginUpdates?: boolean
   checkDockerUpdates?: boolean
   initialCheckDelay?: number
+  autoUpdateHomebridge?: boolean
+  autoUpdateHomebridgeUI?: boolean
+  autoUpdatePlugins?: boolean
+  allowDirectNpmUpdates?: boolean
+  autoRestartAfterUpdates?: boolean
+  failureSensorType?: string
 }

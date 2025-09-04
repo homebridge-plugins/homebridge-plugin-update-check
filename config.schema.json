@@ -12,14 +12,15 @@
       "name": {
         "title": "Name",
         "type": "string",
-        "required": true,
         "default": "Plugin Update",
-        "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit."
+        "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit. Can only contain letters, numbers, spaces, hyphens, and underscores. Periods and other special characters are not allowed as they can cause HomeKit pairing issues.",
+        "pattern": "^[a-zA-Z0-9\\s\\-_]+$",
+        "minLength": 1,
+        "maxLength": 64
       },
       "sensorType": {
         "title": "Sensor Type",
         "type": "string",
-        "required": true,
         "default": "motion",
         "description": "What type of sensor will be exposed to HomeKit.",
         "oneOf": [
@@ -100,7 +101,86 @@
         "default": 10,
         "minimum": 0,
         "maximum": 300
+      "autoUpdateHomebridge": {
+        "title": "Auto-update Homebridge",
+        "type": "boolean",
+        "description": "Automatically install Homebridge updates when available (requires homebridge-config-ui-x and sufficient npm privileges)",
+        "default": false
+      },
+      "autoUpdateHomebridgeUI": {
+        "title": "Auto-update Homebridge Config UI",
+        "type": "boolean", 
+        "description": "Automatically install Homebridge Config UI updates when available (requires homebridge-config-ui-x and sufficient npm privileges)",
+        "default": false
+      },
+      "autoUpdatePlugins": {
+        "title": "Auto-update plugins",
+        "type": "boolean",
+        "description": "Automatically install plugin updates when available (requires homebridge-config-ui-x and sufficient npm privileges)", 
+        "default": false
+      },
+      "allowDirectNpmUpdates": {
+        "title": "Allow direct npm updates",
+        "type": "boolean",
+        "description": "Allow automatic updates using direct npm commands even when homebridge-config-ui-x is not available (requires sufficient npm privileges)",
+        "default": false
+      },
+      "autoRestartAfterUpdates": {
+        "title": "Auto-restart after updates",
+        "type": "boolean",
+        "description": "Automatically restart Homebridge after successful automatic updates to apply changes",
+        "default": false
+      },
+      "failureSensorType": {
+        "title": "Failure Sensor Type",
+        "type": "string",
+        "required": false,
+        "default": "motion",
+        "description": "What type of sensor will be used for update/restart failure notifications (only shown when auto-updates are enabled).",
+        "oneOf": [
+          {
+            "title": "Motion Sensor",
+            "enum": ["motion"]
+          },
+          {
+            "title": "Contact Sensor",
+            "enum": ["contact"]
+          },
+          {
+            "title": "Occupancy Sensor",
+            "enum": ["occupancy"]
+          },
+          {
+            "title": "Humidity Sensor",
+            "enum": ["humidity"]
+          },
+          {
+            "title": "Light Sensor",
+            "enum": ["light"]
+          },
+          {
+            "title": "Air Quality Sensor",
+            "enum": ["air"]
+          },
+          {
+            "title": "Leak Sensor",
+            "enum": ["leak"]
+          },
+          {
+            "title": "Smoke Sensor",
+            "enum": ["smoke"]
+          },
+          {
+            "title": "Carbon Dioxide Sensor",
+            "enum": ["dioxide"]
+          },
+          {
+            "title": "Carbon Monoxide Sensor",
+            "enum": ["monoxide"]
+          }
+        ]
       }
-    }
+    },
+    "required": ["name", "sensorType"]
   }
 }
