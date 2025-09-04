@@ -60,6 +60,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
   private readonly checkDocker: boolean
+  private readonly initialCheckDelay: number
+  private readonly autoUpdateHB: boolean
+  private readonly autoUpdateHBUI: boolean
+  private readonly autoUpdatePlugins: boolean
+  private readonly allowDirectNpmUpdates: boolean
+  private readonly autoRestartAfterUpdates: boolean
 
   private service?: Service
 
@@ -88,6 +94,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
     this.checkPlugins = this.config.checkPluginUpdates ?? false
     this.checkDocker = this.config.checkDockerUpdates ?? false
+    this.initialCheckDelay = this.config.initialCheckDelay ?? 10
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -107,7 +114,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     setTimeout(() => {
       this.doCheck()
       this.firstDailyRun = false
-    }, 10 * 1000)
+    }, this.initialCheckDelay * 1000)
 
     const timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
     this.setupFirstDailyRunResetCron(timezone)
