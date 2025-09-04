@@ -23,9 +23,12 @@ import {
 
 import type { PluginUpdatePlatformConfig } from './configTypes.js'
 
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import { hostname } from 'node:os'
+import path from 'node:path'
+import process from 'node:process'
+
 import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
@@ -53,19 +56,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
-  private readonly failureSensorInfo: SensorInfo
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
   private readonly checkDocker: boolean
-  private readonly autoUpdateHB: boolean
-  private readonly autoUpdateHBUI: boolean
-  private readonly autoUpdatePlugins: boolean
-  private readonly allowDirectNpmUpdates: boolean
-  private readonly autoRestartAfterUpdates: boolean
 
   private service?: Service
-  private failureService?: Service
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
@@ -74,17 +70,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private hbUIUpdates: string[] = []
   private pluginUpdates: string[] = []
   private dockerUpdates: string[] = []
-
-  // Track successful updates for restart logic
-  private successfulHomebridgeUpdate: boolean = false
-  private successfulHBUIUpdate: boolean = false
-  private successfulPluginUpdates: string[] = []
-
-  // Track failures for notification sensor
-  private hasUpdateFailures: boolean = false
-
-  // Track backup creation status
-  private backupCreated: boolean = false
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -98,18 +83,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
-    this.failureSensorInfo = this.getSensorInfo(this.config.failureSensorType || 'motion')
 
     this.checkHB = this.config.checkHomebridgeUpdates ?? false
     this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
     this.checkPlugins = this.config.checkPluginUpdates ?? false
     this.checkDocker = this.config.checkDockerUpdates ?? false
-
-    this.autoUpdateHB = this.config.autoUpdateHomebridge ?? false
-    this.autoUpdateHBUI = this.config.autoUpdateHomebridgeUI ?? false
-    this.autoUpdatePlugins = this.config.autoUpdatePlugins ?? false
-    this.allowDirectNpmUpdates = this.config.allowDirectNpmUpdates ?? false
-    this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -124,18 +102,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.configureAccessory(newAccessory)
 
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
-    }
-
-    // Add failure notification sensor if any auto-update features are enabled
-    if (this.hasAutoUpdateEnabled() && !this.failureService) {
-      const failureUuid = hap.uuid.generate(`${PLATFORM_NAME}_failure`)
-      const failureAccessory = new Accessory('Update or Restart Failure Sensor', failureUuid)
-
-      failureAccessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
-
-      this.configureFailureAccessory(failureAccessory)
-
-      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [failureAccessory])
     }
 
     setTimeout(() => {
@@ -159,7 +125,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       },
       async () => {
         this.firstDailyRun = true
-        this.backupCreated = false // Reset backup flag for daily backup creation
         this.log.debug(`Reset "firstDailyRun" to ${this.firstDailyRun}`)
       },
     )
@@ -183,33 +148,26 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     )
   }
 
-  async ensureNcuInstalled() {
-    // Check if ncu is available
-    const check = spawnSync('ncu', ['--version'], { encoding: 'utf8' })
-
-    if (check.error || check.status !== 0) {
-      this.log.warn('npm-check-updates (ncu) not found. Installing globally...')
-      const install = spawnSync('npm', ['install', '-g', 'npm-check-updates'], { stdio: 'inherit' })
-      if (install.error || install.status !== 0) {
-        throw new Error('Failed to install npm-check-updates globally. Please install it manually.')
-      }
-      this.log.info('npm-check-updates installed successfully.')
-    } else {
-      this.log.debug('npm-check-updates (ncu) is already installed.')
-    }
-  }
-
-  // Use global 'ncu' instead of local path
   async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
-    args = [
-      '--jsonUpgraded',
-      '--filter',
-      filter,
-    ].concat(args)
+    // Try local npm-check-updates installation first
+    const localNcuPath = path.resolve(__dirname, '../node_modules/npm-check-updates/build/cli.js')
+    let ncuCommand: string = process.argv0
+    let ncuArgs: string[] = []
+
+    if (fs.existsSync(localNcuPath)) {
+      // Use local installation
+      this.log.debug(`Using local npm-check-updates at: ${localNcuPath}`)
+      ncuArgs = [localNcuPath, '--jsonUpgraded', '--filter', filter].concat(args)
+    } else {
+      // Fallback to global ncu command
+      this.log.debug('Local npm-check-updates not found, trying global ncu command')
+      ncuCommand = 'ncu'
+      ncuArgs = ['--jsonUpgraded', '--filter', filter].concat(args)
+    }
 
     const output = await new Promise<string>((resolve, reject) => {
       try {
-        const ncu = spawn('ncu', args, {
+        const ncu = spawn(ncuCommand, ncuArgs, {
           env: this.isDocker ? { ...process.env, HOME: '/homebridge' } : undefined,
         })
         let stdout = ''
@@ -220,12 +178,19 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         ncu.stderr.on('data', (chunk: any) => {
           stderr += chunk.toString()
         })
-        ncu.on('close', () => {
-          if (stderr) {
-            reject(stderr)
+        ncu.on('close', (code) => {
+          if (code !== 0 || stderr) {
+            const errorMsg = `npm-check-updates failed with exit code ${code}: ${stderr}`
+            this.log.error(errorMsg)
+            reject(new Error(errorMsg))
           } else {
             resolve(stdout)
           }
+        })
+        ncu.on('error', (error) => {
+          const errorMsg = `Failed to run npm-check-updates: ${error.message}. Ensure npm-check-updates is installed locally or globally as 'ncu'.`
+          this.log.error(errorMsg)
+          reject(new Error(errorMsg))
         })
       } catch (ex) {
         reject(ex)
@@ -248,9 +213,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (this.checkPlugins) filters.push(pluginsFilter)
 
     // eslint-disable-next-line prefer-template
-    const filter = filters.length > 0
-      ? '/^(' + filters.join('|') + ')$/'
-      : '/^$/'; // matches nothing if no filters are selected
+    const filter = '/^' + filters.join('|') + ')$/'
 
     let results = await this.runNcu(['--global'], filter)
 
@@ -276,16 +239,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     let logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
     const updatesAvailable: InstalledPlugin[] = []
 
-    // Create backup before performing any automatic updates
-    const shouldCreateBackup = this.autoUpdateHB || this.autoUpdateHBUI || this.autoUpdatePlugins
-    if (shouldCreateBackup && !this.backupCreated) {
-      this.log.info('Automatic updates are enabled - creating backup before updates')
-      this.backupCreated = await this.uiApi.createBackup()
-      if (!this.backupCreated) {
-        this.log.warn('Backup creation failed, but continuing with updates. Ensure you have manual backups in place.')
-      }
-    }
-
     if (this.checkHB) {
       const homebridge = await this.uiApi.getHomebridge()
 
@@ -296,26 +249,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
         if (this.hbUpdates.length === 0 || !this.hbUpdates.includes(version)) logLevel = LogLevel.INFO
         this.log.log(logLevel, `Homebridge update available: ${version}`)
-
-        // Attempt automatic update if enabled
-        if (this.autoUpdateHB && (!this.useNcu || this.allowDirectNpmUpdates)) {
-          try {
-            this.log.info(`Attempting to automatically update Homebridge to ${version}`)
-            const success = await this.uiApi.updateHomebridge(version)
-            if (success) {
-              this.log.info(`Successfully initiated Homebridge update to ${version}`)
-              this.successfulHomebridgeUpdate = true
-            } else {
-              this.log.warn(`Failed to initiate Homebridge update to ${version}`)
-              this.setFailureState('Homebridge update failed')
-            }
-          } catch (error) {
-            this.log.error(`Error during automatic Homebridge update: ${error}`)
-            this.setFailureState(`Homebridge update error: ${error}`)
-          }
-        } else if (this.autoUpdateHB && this.useNcu && !this.allowDirectNpmUpdates) {
-          this.log.warn('Automatic updates require either homebridge-config-ui-x to be available or "allowDirectNpmUpdates" to be enabled')
-        }
 
         this.hbUpdates = [version]
       }
@@ -328,7 +261,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
         const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
 
         // Only one plugin is returned
-        for (const homebridgeUI of homebridgeUiPlugins) {
+        homebridgeUiPlugins.forEach((homebridgeUI) => {
           if (homebridgeUI.updateAvailable) {
             updatesAvailable.push(homebridgeUI)
 
@@ -337,37 +270,15 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             if (this.hbUIUpdates.length === 0 || !this.hbUIUpdates.includes(version)) logLevel = LogLevel.INFO
             this.log.log(logLevel, `Homebridge UI update available: ${version}`)
 
-            // Attempt automatic update if enabled
-            if (this.autoUpdateHBUI && (!this.useNcu || this.allowDirectNpmUpdates)) {
-              try {
-                this.log.info(`Attempting to automatically update Homebridge UI to ${version}`)
-                const success = await this.uiApi.updatePlugin('homebridge-config-ui-x', version)
-                if (success) {
-                  this.log.info(`Successfully initiated Homebridge UI update to ${version}`)
-                  this.successfulHBUIUpdate = true
-                } else {
-                  this.log.warn(`Failed to initiate Homebridge UI update to ${version}`)
-                  this.setFailureState('Homebridge UI update failed')
-                }
-              } catch (error) {
-                this.log.error(`Error during automatic Homebridge UI update: ${error}`)
-                this.setFailureState(`Homebridge UI update error: ${error}`)
-              }
-            } else if (this.autoUpdateHBUI && this.useNcu && !this.allowDirectNpmUpdates) {
-              this.log.warn('Automatic updates require either homebridge-config-ui-x to be available or "allowDirectNpmUpdates" to be enabled')
-            }
-
             this.hbUIUpdates = [version]
           }
-        }
+        })
       }
 
       if (this.checkPlugins) {
         const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
 
-        const tempUpdates: string[] = []
-
-        for (const plugin of filteredPlugins) {
+        filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
             updatesAvailable.push(plugin)
 
@@ -376,31 +287,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             if (this.pluginUpdates.length === 0 || !this.pluginUpdates.includes(version)) logLevel = LogLevel.INFO
             this.log.log(logLevel, `Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
 
-            // Attempt automatic update if enabled
-            if (this.autoUpdatePlugins && (!this.useNcu || this.allowDirectNpmUpdates)) {
-              try {
-                this.log.info(`Attempting to automatically update plugin ${plugin.name} to ${version}`)
-                const success = await this.uiApi.updatePlugin(plugin.name, version)
-                if (success) {
-                  this.log.info(`Successfully initiated plugin update: ${plugin.name} to ${version}`)
-                  this.successfulPluginUpdates.push(plugin.name)
-                } else {
-                  this.log.warn(`Failed to initiate plugin update: ${plugin.name} to ${version}`)
-                  this.setFailureState(`Plugin update failed: ${plugin.name}`)
-                }
-              } catch (error) {
-                this.log.error(`Error during automatic plugin update for ${plugin.name}: ${error}`)
-                this.setFailureState(`Plugin update error for ${plugin.name}: ${error}`)
-              }
-            } else if (this.autoUpdatePlugins && this.useNcu && !this.allowDirectNpmUpdates) {
-              this.log.warn('Automatic updates require either homebridge-config-ui-x to be available or "allowDirectNpmUpdates" to be enabled')
-            }
-
-            tempUpdates.push(version)
+            this.pluginUpdates.push(version)
           }
-        }
-
-        this.pluginUpdates = tempUpdates
+        })
       }
     }
 
@@ -419,36 +308,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
     }
 
-    this.log.log(logLevel, `Available update(s): ${updatesAvailable.length}`)
-
-    // Check if restart is needed after successful updates
-    if (this.autoRestartAfterUpdates && (this.successfulHomebridgeUpdate || this.successfulHBUIUpdate || this.successfulPluginUpdates.length > 0)) {
-      this.log.info('Successful updates detected, preparing to restart Homebridge...')
-
-      // List what was updated
-      const updatedComponents: string[] = []
-      if (this.successfulHomebridgeUpdate) updatedComponents.push('Homebridge')
-      if (this.successfulHBUIUpdate) updatedComponents.push('Homebridge UI')
-      if (this.successfulPluginUpdates.length > 0) updatedComponents.push(`plugins: ${this.successfulPluginUpdates.join(', ')}`)
-
-      this.log.info(`Updated components: ${updatedComponents.join(', ')}`)
-
-      // Clear any previous failure state since updates were successful
-      this.clearFailureState()
-
-      // Restart Homebridge to apply the completed updates
-      try {
-        await this.uiApi.restartHomebridge()
-      } catch (error) {
-        this.log.error(`Failed to restart Homebridge: ${error}`)
-        this.setFailureState(`Homebridge restart failed: ${error}`)
-      }
-
-      // Reset tracking variables
-      this.successfulHomebridgeUpdate = false
-      this.successfulHBUIUpdate = false
-      this.successfulPluginUpdates = []
-    }
+    this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
 
     return updatesAvailable.length
   }
@@ -521,6 +381,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     const monoxideService = accessory.getService(hap.Service.CarbonMonoxideSensor);
     const dioxideService = accessory.getService(hap.Service.CarbonDioxideSensor);
     const airService = accessory.getService(hap.Service.AirQualitySensor);
+
     if (this.sensorInfo.serviceType == hap.Service.MotionSensor) {
       this.service = motionService;
     } else if (motionService) {
@@ -573,48 +434,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     } */
 
     this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
-  }
-
-  configureFailureAccessory(accessory: PlatformAccessory): void {
-    accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log(`${accessory.displayName} identify requested!`)
-    })
-
-    const accInfo = accessory.getService(hap.Service.AccessoryInformation)
-    if (accInfo) {
-      accInfo
-        .setCharacteristic(hap.Characteristic.Manufacturer, 'Homebridge')
-        .setCharacteristic(hap.Characteristic.Model, 'Update or Restart Failure Monitor')
-        .setCharacteristic(hap.Characteristic.SerialNumber, hostname())
-    }
-
-    this.failureService = accessory.getService(this.failureSensorInfo.serviceType)
-    if (!this.failureService) {
-      this.failureService = accessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
-    }
-
-    // Initialize in no-failure state
-    this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, this.failureSensorInfo.untrippedValue)
-  }
-
-  hasAutoUpdateEnabled(): boolean {
-    return this.autoUpdateHB || this.autoUpdateHBUI || this.autoUpdatePlugins
-  }
-
-  setFailureState(reason: string): void {
-    if (this.hasAutoUpdateEnabled() && this.failureService) {
-      this.log.warn(`Update/restart failure detected: ${reason}`)
-      this.hasUpdateFailures = true
-      this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, this.failureSensorInfo.trippedValue)
-    }
-  }
-
-  clearFailureState(): void {
-    if (this.hasAutoUpdateEnabled() && this.failureService && this.hasUpdateFailures) {
-      this.log.info('Clearing update/restart failure state')
-      this.hasUpdateFailures = false
-      this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, this.failureSensorInfo.untrippedValue)
-    }
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {
