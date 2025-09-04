@@ -56,13 +56,13 @@ describe('config schema validation', () => {
         'Plugin*Update', // * symbol
         'Plugin+Update', // + symbol
         'Plugin=Update', // = symbol
-        'Plugin/Update', // / symbol
-        'Plugin\\Update', // \ symbol
-        'Plugin|Update', // | symbol
-        'Plugin<Update>', // < > symbols
-        'Plugin[Update]', // [ ] symbols
-        'Plugin{Update}', // { } symbols
-        'Plugin(Update)', // ( ) symbols
+        'Plugin/Update', // / slash
+        'Plugin\\Update', // \ backslash
+        'Plugin|Update', // | pipe
+        'Plugin<Update>', // < > brackets
+        'Plugin[Update]', // [ ] square brackets
+        'Plugin{Update}', // { } curly brackets
+        'Plugin(Update)', // ( ) parentheses
       ]
 
       invalidNames.forEach((name) => {
