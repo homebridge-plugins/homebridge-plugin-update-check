@@ -82,4 +82,12 @@ describe('pluginUpdatePlatformConfig', () => {
     }
     expect(config.allowDirectNpmUpdates).toBe(true)
   })
+
+  it('should allow autoRestartAfterUpdates property to be set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      autoRestartAfterUpdates: true,
+    }
+    expect(config.autoRestartAfterUpdates).toBe(true)
+  })
 })
