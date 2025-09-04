@@ -1,8 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import type { Ajv } from 'ajv'
-import AjvCreate from 'ajv'
 import Ajv from 'ajv'
 import { beforeAll, describe, expect, it } from 'vitest'
 
@@ -17,7 +15,6 @@ describe('config schema validation', () => {
     const fullSchema = JSON.parse(schemaContent)
     schema = fullSchema.schema
 
-    ajv = new AjvCreate()
     ajv = new Ajv()
   })
 
@@ -59,13 +56,13 @@ describe('config schema validation', () => {
         'Plugin*Update', // * symbol
         'Plugin+Update', // + symbol
         'Plugin=Update', // = symbol
-        'Plugin/Update', // / symbol
-        'Plugin\\Update', // \ symbol
-        'Plugin|Update', // | symbol
-        'Plugin<Update>', // < > symbols
-        'Plugin[Update]', // [ ] symbols
-        'Plugin{Update}', // { } symbols
-        'Plugin(Update)', // ( ) symbols
+        'Plugin/Update', // / slash
+        'Plugin\\Update', // \ backslash
+        'Plugin|Update', // | pipe
+        'Plugin<Update>', // < > brackets
+        'Plugin[Update]', // [ ] square brackets
+        'Plugin{Update}', // { } curly brackets
+        'Plugin(Update)', // ( ) parentheses
       ]
 
       invalidNames.forEach((name) => {

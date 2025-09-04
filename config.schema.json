@@ -15,7 +15,6 @@
         "default": "Plugin Update",
         "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit. Can only contain letters, numbers, spaces, hyphens, and underscores. Periods and other special characters are not allowed as they can cause HomeKit pairing issues.",
         "pattern": "^[a-zA-Z0-9\\s_-]+$",
-        "pattern": "^[a-zA-Z0-9\\s\\-_]+$",
         "minLength": 1,
         "maxLength": 64
       },
@@ -128,7 +127,6 @@
       "failureSensorType": {
         "title": "Failure Sensor Type",
         "type": "string",
-        "required": false,
         "default": "motion",
         "description": "What type of sensor will be used for update/restart failure notifications (only shown when auto-updates are enabled).",
         "oneOf": [
