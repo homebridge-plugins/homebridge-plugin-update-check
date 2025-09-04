@@ -94,6 +94,14 @@
         "type": "boolean",
         "description": "Force use of node-check-updates instead of homebridge-config-ui-x"
       },
+      "initialCheckDelay": {
+        "title": "Initial Check Delay (seconds)",
+        "type": "integer",
+        "description": "Delay in seconds before performing the initial update check after startup",
+        "default": 10,
+        "minimum": 0,
+        "maximum": 300
+      },
       "autoUpdateHomebridge": {
         "title": "Auto-update Homebridge",
         "type": "boolean",
