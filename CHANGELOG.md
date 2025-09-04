@@ -1,3 +1,7 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
+
 ## [2.3.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.1) (2025-09-03)
 
 ### What's Changed
@@ -15,10 +19,6 @@
 - Fix ReferenceError: __dirname is not defined in ESM module (#86) ([5668b01](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/5668b015900d708bbeb4a38d82fac14a7215f022))
 
 **Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.0...v2.3.1
-
-# Changelog
-
-All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
 
 ## [2.3.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.0) (2025-08-18)
 
