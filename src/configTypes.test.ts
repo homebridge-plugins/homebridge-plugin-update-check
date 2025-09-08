@@ -10,8 +10,6 @@ describe('pluginUpdatePlatformConfig', () => {
     expect(config.platform).toBe('ExamplePlatform')
   })
 
-
-
   it('should allow optional sensorType property', () => {
     const config: PluginUpdatePlatformConfig = {
       platform: 'ExamplePlatform',

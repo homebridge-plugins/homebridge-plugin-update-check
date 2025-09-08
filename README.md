@@ -4,8 +4,6 @@
 
 A [Homebridge](https://github.com/nfarina/homebridge) plugin for checking for updates to Homebridge and plugins.
 
-This plugin uses [homebridge-config-ui-x](https://www.npmjs.com/package/homebridge-config-ui-x) to check for available updates.
-
 ## Installation
 
 1. Install Homebridge using the [official instructions](https://github.com/homebridge/homebridge/wiki).

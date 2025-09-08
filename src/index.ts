@@ -247,9 +247,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   doCheck(): void {
-    const check = this.checkUi()
-
-    check
+    this.checkUi()
       .then((updates) => {
         this.service?.setCharacteristic(this.sensorInfo.characteristicType, updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue)
       })
