@@ -28,11 +28,16 @@ import fs from 'node:fs'
 import { hostname } from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
 import { InstalledPlugin, UiApi } from './ui-api.js'
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 let hap: HAP
 let Accessory: typeof PlatformAccessory
@@ -226,7 +231,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (this.checkPlugins) filters.push(pluginsFilter)
 
     // eslint-disable-next-line prefer-template
-    const filter = '/^' + filters.join('|') + ')$/'
+    const filter = '/^(' + filters.join('|') + ')$/'
 
     let results = await this.runNcu(['--global'], filter)
 
