@@ -89,11 +89,7 @@
         "type": "boolean",
         "description": "Check if Docker image updates are available (ignored if not running in Docker container)"
       },
-      "forceNcu": {
-        "title": "Force npm-check-updates",
-        "type": "boolean",
-        "description": "Force use of node-check-updates instead of homebridge-config-ui-x"
-      },
+
       "initialCheckDelay": {
         "title": "Initial Check Delay (seconds)",
         "type": "integer",

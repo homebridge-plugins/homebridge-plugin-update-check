@@ -10,13 +10,7 @@ describe('pluginUpdatePlatformConfig', () => {
     expect(config.platform).toBe('ExamplePlatform')
   })
 
-  it('should allow optional forceNcu property', () => {
-    const config: PluginUpdatePlatformConfig = {
-      platform: 'ExamplePlatform',
-      forceNcu: true,
-    }
-    expect(config.forceNcu).toBe(true)
-  })
+
 
   it('should allow optional sensorType property', () => {
     const config: PluginUpdatePlatformConfig = {
@@ -37,7 +31,6 @@ describe('pluginUpdatePlatformConfig', () => {
   it('should allow all properties to be set', () => {
     const config: PluginUpdatePlatformConfig = {
       platform: 'ExamplePlatform',
-      forceNcu: true,
       sensorType: 'humidity',
       checkHomebridgeUpdates: true,
       checkHomebridgeUIUpdates: true,
@@ -50,7 +43,6 @@ describe('pluginUpdatePlatformConfig', () => {
       allowDirectNpmUpdates: false,
     }
     expect(config.platform).toBe('ExamplePlatform')
-    expect(config.forceNcu).toBe(true)
     expect(config.sensorType).toBe('humidity')
     expect(config.checkHomebridgeUpdates).toBe(true)
     expect(config.checkHomebridgeUIUpdates).toBe(true)

@@ -23,11 +23,9 @@ import {
 
 import type { PluginUpdatePlatformConfig } from './configTypes.js'
 
-import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import { hostname } from 'node:os'
 import path from 'node:path'
-import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import { Cron } from 'croner'
@@ -57,7 +55,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly api: API
   private readonly config: PluginUpdatePlatformConfig
   private readonly uiApi: UiApi
-  private readonly useNcu: boolean
 
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
@@ -91,7 +88,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.api = api
 
     this.uiApi = new UiApi(this.api.user.storagePath(), this.log)
-    this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
 
@@ -166,90 +162,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     )
   }
 
-  async runNcu(args: Array<string>, filter: string = '/^(@.*\\/)?homebridge(-.*)?$/'): Promise<any> {
-    // Try local npm-check-updates installation first
-    const localNcuPath = path.resolve(__dirname, '../node_modules/npm-check-updates/build/cli.js')
-    let ncuCommand: string = process.argv0
-    let ncuArgs: string[] = []
 
-    if (fs.existsSync(localNcuPath)) {
-      // Use local installation
-      this.log.debug(`Using local npm-check-updates at: ${localNcuPath}`)
-      ncuArgs = [localNcuPath, '--jsonUpgraded', '--filter', filter].concat(args)
-    } else {
-      // Fallback to global ncu command
-      this.log.debug('Local npm-check-updates not found, trying global ncu command')
-      ncuCommand = 'ncu'
-      ncuArgs = ['--jsonUpgraded', '--filter', filter].concat(args)
-    }
 
-    const output = await new Promise<string>((resolve, reject) => {
-      try {
-        const ncu = spawn(ncuCommand, ncuArgs, {
-          env: this.isDocker ? { ...process.env, HOME: '/homebridge' } : undefined,
-        })
-        let stdout = ''
-        ncu.stdout.on('data', (chunk: any) => {
-          stdout += chunk.toString()
-        })
-        let stderr = ''
-        ncu.stderr.on('data', (chunk: any) => {
-          stderr += chunk.toString()
-        })
-        ncu.on('close', (code) => {
-          if (code !== 0 || stderr) {
-            const errorMsg = `npm-check-updates failed with exit code ${code}: ${stderr}`
-            this.log.error(errorMsg)
-            reject(new Error(errorMsg))
-          } else {
-            resolve(stdout)
-          }
-        })
-        ncu.on('error', (error) => {
-          const errorMsg = `Failed to run npm-check-updates: ${error.message}. Ensure npm-check-updates is installed locally or globally as 'ncu'.`
-          this.log.error(errorMsg)
-          reject(new Error(errorMsg))
-        })
-      } catch (ex) {
-        reject(ex)
-      }
-    })
 
-    return JSON.parse(output)
-  }
-
-  async checkNcu(): Promise<number> {
-    this.log.debug('Checking for updates using NCU')
-
-    const homebridgeFilter = 'homebridge'
-    const homebridgeUIFilter = 'homebridge-config-ui-x'
-    const pluginsFilter = '(?=(@.*\\/)?homebridge-)(?:(?!homebridge-config-ui-x).)*'
-
-    const filters: string[] = []
-    if (this.checkHB) filters.push(homebridgeFilter)
-    if (this.checkHBUI) filters.push(homebridgeUIFilter)
-    if (this.checkPlugins) filters.push(pluginsFilter)
-
-    // eslint-disable-next-line prefer-template
-    const filter = '/^(' + filters.join('|') + ')$/'
-
-    let results = await this.runNcu(['--global'], filter)
-
-    if (this.isDocker) {
-      const dockerPackageResults = await this.runNcu(['--packageFile', '/homebridge/package.json'], filter)
-      results = { ...results, ...dockerPackageResults }
-
-      const docker = await this.uiApi.getDocker()
-      if (docker.updateAvailable) {
-        results.push(docker)
-      }
-    }
-
-    const updates = Object.keys(results).length
-    this.log.debug(`npm-check-updates reports ${updates} available update(s): ${JSON.stringify(results)}`)
-
-    return updates
-  }
 
   async checkUi(): Promise<number> {
     this.log.debug('Searching for available updates ...')
@@ -332,9 +247,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   doCheck(): void {
-    const check = this.useNcu ? this.checkNcu() : this.checkUi()
-
-    this.log.debug(`Checking with ncu: ${this.useNcu}`)
+    const check = this.checkUi()
 
     check
       .then((updates) => {

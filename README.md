@@ -4,7 +4,7 @@
 
 A [Homebridge](https://github.com/nfarina/homebridge) plugin for checking for updates to Homebridge and plugins.
 
-This will use [homebridge-config-ui-x](https://www.npmjs.com/package/homebridge-config-ui-x) when available, but will fall back to using [npm-check-updates](https://www.npmjs.com/package/npm-check-updates) if it is not.
+This plugin uses [homebridge-config-ui-x](https://www.npmjs.com/package/homebridge-config-ui-x) to check for available updates.
 
 ## Installation
 
@@ -31,7 +31,6 @@ Configuration sample:
         "allowDirectNpmUpdates": false,
         "autoRestartAfterUpdates": false,
         "failureSensorType": "motion",
-        "forceNcu": false,
         "platform": "PluginUpdate"
     }
 ]
@@ -51,7 +50,6 @@ Configuration sample:
 * "allowDirectNpmUpdates": Allow automatic updates using direct npm commands even when homebridge-config-ui-x is not available (Default: `false`)
 * "autoRestartAfterUpdates": Automatically restart Homebridge after successful automatic updates to apply changes (Default: `false`)
 * "failureSensorType": What type of sensor will be used for update/restart failure notifications. Can be `motion`, `contact`, `occupancy`, `humidity`, `light`, `air`, `leak`, `smoke`, `dioxide`, or `monoxide` (Default: `motion`, only shown when auto-updates are enabled)
-* "forceNcu": Force use of npm-check-updates instead of homebridge-config-ui-x. (Default: `false`)
 
 Homebridge, Homebridge UI, plugin, and Docker updates can be selected independently. This allows you for example, to ignore available Homebridge, Homebridge UI available updates if you are running Homebridge in a Docker container and wish to only update these components when a new Docker image is available.
 
