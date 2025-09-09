@@ -56,8 +56,8 @@ export class UiApi {
     axiosRetry(axios, {
       retries: 3,
       retryDelay: (...arg) => axiosRetry.exponentialDelay(...arg, 1000),
-      // eslint-disable-next-line unused-imports/no-unused-vars
-      onRetry: (retryCount, error, requestConfig) => {
+      
+      onRetry: (retryCount, error, _requestConfig) => {
         this.log.debug(`retry count: ${retryCount}, error: ${error.message}`)
       },
     })
