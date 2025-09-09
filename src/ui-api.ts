@@ -15,7 +15,7 @@ import https from 'node:https'
 import path from 'node:path'
 import process from 'node:process'
 
-import axios from 'axios'
+import axios, { type AxiosInstance } from 'axios'
 import axiosRetry from 'axios-retry'
 import CacheableLookup from 'cacheable-lookup'
 import jwt from 'jsonwebtoken'
@@ -49,11 +49,16 @@ export class UiApi {
   private token?: string
   private readonly dockerUrl?: string
   private readonly cacheable: CacheableLookup
+  private readonly axiosInstance: AxiosInstance
 
   constructor(hbStoragePath: string, log: Logging) {
     this.log = log
 
-    axiosRetry(axios, {
+    // Create a dedicated axios instance for this class
+    this.axiosInstance = axios.create()
+    
+    // Configure axios-retry on the dedicated instance instead of globally
+    axiosRetry(this.axiosInstance, {
       retries: 3,
       retryDelay: (...arg) => axiosRetry.exponentialDelay(...arg, 1000),
       
@@ -297,7 +302,7 @@ export class UiApi {
   }
 
   private async makeRestartCall(apiPath: string): Promise<unknown> {
-    const response = await axios.put(this.baseUrl + apiPath, {}, {
+    const response = await this.axiosInstance.put(this.baseUrl + apiPath, {}, {
       headers: {
         Authorization: `Bearer ${this.getToken()}`,
       },
@@ -308,7 +313,7 @@ export class UiApi {
   }
 
   private async makeBackupCall(apiPath: string): Promise<unknown> {
-    const response = await axios.post(this.baseUrl + apiPath, {}, {
+    const response = await this.axiosInstance.post(this.baseUrl + apiPath, {}, {
       headers: {
         Authorization: `Bearer ${this.getToken()}`,
       },
@@ -320,7 +325,7 @@ export class UiApi {
   }
 
   private async makeDockerCall(apiPath: string): Promise<any> {
-    const response = await axios.get(this.dockerUrl + apiPath, {
+    const response = await this.axiosInstance.get(this.dockerUrl + apiPath, {
       httpsAgent: this.httpsAgent,
       lookup: this.cacheable.lookup,
     })
@@ -329,7 +334,7 @@ export class UiApi {
   }
 
   private async makeCall(apiPath: string): Promise<unknown> {
-    const response = await axios.get(this.baseUrl + apiPath, {
+    const response = await this.axiosInstance.get(this.baseUrl + apiPath, {
       headers: {
         Authorization: `Bearer ${this.getToken()}`,
       },
