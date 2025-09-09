@@ -1,4 +1,3 @@
-/* eslint-disable node/prefer-global/process */
 /* eslint-disable style/operator-linebreak */
 /* eslint-disable object-shorthand */
 /* eslint no-console: ["error", { allow: ["info", "warn", "error"] }] */
@@ -17,6 +16,8 @@ import path from 'node:path'
 import process from 'node:process'
 
 import axios from 'axios'
+import axiosRetry from 'axios-retry'
+import CacheableLookup from 'cacheable-lookup'
 import jwt from 'jsonwebtoken'
 
 export interface InstalledPlugin {
@@ -47,9 +48,20 @@ export class UiApi {
   private readonly httpsAgent?: https.Agent
   private token?: string
   private readonly dockerUrl?: string
+  private readonly cacheable: CacheableLookup
 
   constructor(hbStoragePath: string, log: Logging) {
     this.log = log
+
+    axiosRetry(axios, {
+      retries: 3,
+      retryDelay: (...arg) => axiosRetry.exponentialDelay(...arg, 1000),
+      // eslint-disable-next-line unused-imports/no-unused-vars
+      onRetry: (retryCount, error, requestConfig) => {
+        this.log.debug(`retry count: ${retryCount}, error: ${error.message}`)
+      },
+    })
+    this.cacheable = new CacheableLookup()
 
     const configPath = path.resolve(hbStoragePath, 'config.json')
     const hbConfig = JSON.parse(readFileSync(configPath, 'utf8')) as HomebridgeConfig
@@ -140,11 +152,11 @@ export class UiApi {
 
   public async updateHomebridge(targetVersion?: string): Promise<boolean> {
     this.log.info(`Attempting to update Homebridge${targetVersion ? ` to ${targetVersion}` : ' to latest version'}`)
-    
+
     try {
       const args = ['install', '-g', `homebridge${targetVersion ? `@${targetVersion}` : '@latest'}`]
       const result = await this.runNpmCommand(args)
-      this.log.info('Homebridge update command completed successfully')
+      this.log.info(`Homebridge update command completed successfully with result: ${result}`)
       return true
     } catch (error) {
       this.log.error(`Failed to update Homebridge: ${error}`)
@@ -154,11 +166,11 @@ export class UiApi {
 
   public async updatePlugin(pluginName: string, targetVersion?: string): Promise<boolean> {
     this.log.info(`Attempting to update plugin ${pluginName}${targetVersion ? ` to ${targetVersion}` : ' to latest version'}`)
-    
+
     try {
       const args = ['install', '-g', `${pluginName}${targetVersion ? `@${targetVersion}` : '@latest'}`]
       const result = await this.runNpmCommand(args)
-      this.log.info(`Plugin ${pluginName} update command completed successfully`)
+      this.log.info(`Plugin ${pluginName} update command completed successfully with result: ${result}`)
       return true
     } catch (error) {
       this.log.error(`Failed to update plugin ${pluginName}: ${error}`)
@@ -172,18 +184,20 @@ export class UiApi {
         const npm = spawn('npm', args, {
           env: process.env,
         })
-        
+
         let stdout = ''
         let stderr = ''
-        
+
+        // eslint-disable-next-line node/prefer-global/buffer
         npm.stdout.on('data', (chunk: Buffer) => {
           stdout += chunk.toString()
         })
-        
+
+        // eslint-disable-next-line node/prefer-global/buffer
         npm.stderr.on('data', (chunk: Buffer) => {
           stderr += chunk.toString()
         })
-        
+
         npm.on('close', (code) => {
           if (code === 0) {
             resolve(stdout)
@@ -191,7 +205,7 @@ export class UiApi {
             reject(new Error(`npm command failed with code ${code}: ${stderr}`))
           }
         })
-        
+
         npm.on('error', (error) => {
           reject(error)
         })
@@ -203,17 +217,17 @@ export class UiApi {
 
   public async createBackup(): Promise<boolean> {
     this.log.info('Creating backup before performing updates')
-    
+
     try {
       if (this.isConfigured()) {
         // Try different possible backup API endpoints
         const backupEndpoints = [
           '/api/backup/create',
-          '/api/backups/create', 
+          '/api/backups/create',
           '/api/backup',
-          '/api/server/backup'
+          '/api/server/backup',
         ]
-        
+
         for (const endpoint of backupEndpoints) {
           try {
             await this.makeBackupCall(endpoint)
@@ -224,7 +238,7 @@ export class UiApi {
             // Continue to next endpoint
           }
         }
-        
+
         this.log.warn('All backup endpoints failed - backup creation unavailable')
         return false
       } else {
@@ -240,16 +254,16 @@ export class UiApi {
 
   public async restartHomebridge(): Promise<boolean> {
     this.log.info('Attempting to restart Homebridge to apply updates')
-    
+
     try {
       if (this.isConfigured()) {
         // Try different restart endpoints with fallback strategy
         const restartEndpoints = [
           '/api/server/restart',
           '/api/platform-tools/docker/restart-container',
-          '/api/platform-tools/linux/restart-host'
+          '/api/platform-tools/linux/restart-host',
         ]
-        
+
         for (const endpoint of restartEndpoints) {
           try {
             await this.makeRestartCall(endpoint)
@@ -260,7 +274,7 @@ export class UiApi {
             // Continue to next endpoint
           }
         }
-        
+
         this.log.warn('All restart endpoints failed - UI API restart unavailable')
         // Fallback: exit process to trigger restart by process manager
         this.log.info('Falling back to process exit for restart')
@@ -308,6 +322,7 @@ export class UiApi {
   private async makeDockerCall(apiPath: string): Promise<any> {
     const response = await axios.get(this.dockerUrl + apiPath, {
       httpsAgent: this.httpsAgent,
+      lookup: this.cacheable.lookup,
     })
 
     return response.data
@@ -319,6 +334,7 @@ export class UiApi {
         Authorization: `Bearer ${this.getToken()}`,
       },
       httpsAgent: this.httpsAgent,
+      lookup: this.cacheable.lookup,
     })
 
     return response.data
