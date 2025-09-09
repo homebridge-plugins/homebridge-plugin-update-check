@@ -76,6 +76,8 @@
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^2.1.0",
     "axios": "^1.11.0",
+    "axios-retry": "^4.5.0",
+    "cacheable-lookup": "^7.0.0",
     "croner": "^9.1.0",
     "jsonwebtoken": "^9.0.2"
   },
