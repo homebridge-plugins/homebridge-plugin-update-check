@@ -156,7 +156,7 @@ export class UiApi {
     try {
       const args = ['install', '-g', `homebridge${targetVersion ? `@${targetVersion}` : '@latest'}`]
       const result = await this.runNpmCommand(args)
-      this.log.info(`Homebridge update command completed successfully with result: ${result}`)
+      this.log.info(`Homebridge update command completed successfully (${result})`)
       return true
     } catch (error) {
       this.log.error(`Failed to update Homebridge: ${error}`)
@@ -170,7 +170,7 @@ export class UiApi {
     try {
       const args = ['install', '-g', `${pluginName}${targetVersion ? `@${targetVersion}` : '@latest'}`]
       const result = await this.runNpmCommand(args)
-      this.log.info(`Plugin ${pluginName} update command completed successfully with result: ${result}`)
+      this.log.info(`Plugin ${pluginName} update command completed successfully (${result})`)
       return true
     } catch (error) {
       this.log.error(`Failed to update plugin ${pluginName}: ${error}`)
