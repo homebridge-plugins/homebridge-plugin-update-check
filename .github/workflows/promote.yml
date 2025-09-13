@@ -1,0 +1,13 @@
+name: Promote
+
+on:
+  push:
+    branches:
+      - "alpha-*"
+      - "beta-*"
+
+jobs:
+  call-promotion:
+    uses: homebridge/.github/.github/workflows/promote.yml@latest
+    with:
+      source-branch: ${{ github.ref_name }}

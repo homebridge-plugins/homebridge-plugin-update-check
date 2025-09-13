@@ -12,6 +12,7 @@ jobs:
       enable_coverage: false
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
+
   lint:
     needs: build_and_test
     uses: homebridge/.github/.github/workflows/eslint.yml@latest
@@ -43,7 +44,7 @@ jobs:
 
   github-releases-to-discord:
     name: Discord Webhooks
-    needs: [build_and_test,publish]
+    needs: [build_and_test, publish]
     if: ${{ github.repository == 'homebridge-plugins/homebridge-plugin-update-check' }}
     uses: homebridge/.github/.github/workflows/discord-webhooks.yml@latest
     with:
@@ -53,3 +54,11 @@ jobs:
       url: "https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v${{ needs.publish.outputs.NPM_VERSION }}"
     secrets:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL_BETA || secrets.DISCORD_WEBHOOK_URL_LATEST }}
+
+  promote:
+    name: Promote Beta → Latest
+    needs: publish
+    if: ${{ github.repository == 'homebridge-plugins/homebridge-plugin-update-check' }}
+    uses: homebridge/.github/.github/workflows/promote.yml@latest
+    with:
+      source-branch: ${{ github.ref_name }}
