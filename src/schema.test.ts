@@ -1,8 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import Ajv from 'ajv'
 import { beforeAll, describe, expect, it } from 'vitest'
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 describe('config schema validation', () => {
   let schema: any
