@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
 
+## [2.3.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.2) (2025-09-13)
+
+### What's Changed
+- Remove double variables for file and directory paths (#115) ([4743e21](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/4743e21c40bac30c1084d6ca0642f1d9ad723579))
+- Remove npm-check-updates (NCU) option as it doesn't add value (#117) ([d8f5ee5](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/d8f5ee5dfc3886d665b646803fa48c1f6506abdb))
+- Added cached dns lookup and retries (#118) ([f375adb](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/f375adb8c7a3bae35ff548c86c16a34e7daa037c))
+- Add NodeJS 24 support by updating engines.node to ^20 || ^22 || ^24 (rebased against beta-2.3.2) (#123) ([f64de4d](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/f64de4d1f3f6d4bf46102b9ca14716360aba6ce0))
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.1...v2.3.2
+
 ## [2.3.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.1) (2025-09-03)
 
 ### What's Changed
