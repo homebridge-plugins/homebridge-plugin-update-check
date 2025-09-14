@@ -1,85 +1,45 @@
-name: Release
+name: Unified Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - "alpha-*"
+      - "beta-*"
+      - latest
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., v2.3.4)'
-        required: true
-        type: string
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  determine-release-type:
+    uses: homebridge/.github/.github/workflows/determine-release-type.yml@latest
+    with:
+      ref_name: ${{ github.ref_name }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+  update-version:
+    needs: determine-release-type
+    uses: homebridge/.github/.github/workflows/update-version.yml@latest
+    with:
+      release_type: ${{ needs.determine-release-type.outputs.release_type }}
 
-      - name: Install dependencies
-        run: npm ci
+  publish-release:
+    needs: [determine-release-type, update-version]
+    uses: homebridge/.github/.github/workflows/publish-release.yml@latest
+    with:
+      release_type: ${{ needs.determine-release-type.outputs.release_type }}
+      version: ${{ needs.update-version.outputs.version }}
 
-      - name: Lint
-        run: npm run lint
+  promote-branch:
+    needs: [determine-release-type, publish-release]
+    if: ${{ needs.determine-release-type.outputs.release_type != 'latest' && needs.determine-release-type.outputs.release_type != 'skip' }}
+    uses: homebridge/.github/.github/workflows/promote-branch.yml@latest
+    with:
+      branch_name: ${{ needs.determine-release-type.outputs.branch_name }}
+      release_type: ${{ needs.determine-release-type.outputs.release_type }}
 
-      - name: Build
-        run: npm run build
-
-      - name: Test
-        run: npm test
-
-      - name: Get version from tag or input
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/}"
-          fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Version to release: ${VERSION}"
-          
-          # Validate version format (should start with 'v' and contain semver pattern)
-          if [[ ! "${VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
-            echo "Error: Invalid version format '${VERSION}'. Expected format: v1.2.3 or v1.2.3-beta.1"
-            exit 1
-          fi
-
-      - name: Validate version consistency
-        run: |
-          PACKAGE_VERSION="v$(node -p "require('./package.json').version")"
-          TAG_VERSION="${{ steps.version.outputs.version }}"
-          echo "Package.json version: ${PACKAGE_VERSION}"
-          echo "Tag/input version: ${TAG_VERSION}"
-          
-          if [ "${PACKAGE_VERSION}" != "${TAG_VERSION}" ]; then
-            echo "Error: Version mismatch between package.json (${PACKAGE_VERSION}) and tag/input (${TAG_VERSION})"
-            echo "Please update package.json version to match the release version"
-            exit 1
-          fi
-          echo "Version consistency check passed"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: ${{ steps.version.outputs.version }}
-          body: |
-            Release ${{ steps.version.outputs.version }}
-            
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/latest/CHANGELOG.md) for details.
-          draft: false
-          prerelease: false
-
-      - name: Publish to NPM
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  workflow-failure:
+    if: ${{ failure() }}  # Only runs if any job above fails
+    needs: [determine-release-type, update-version, publish-release, promote-branch]
+    uses: homebridge/.github/.github/workflows/report-failure.yml@latest
+    with:
+      workflow_name: ${{ github.workflow }}
+      job_name: ${{ github.job }}
+      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
