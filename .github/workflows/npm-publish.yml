@@ -1,0 +1,48 @@
+name: NPM Publish on Release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  detect-esm:
+    runs-on: ubuntu-latest
+    outputs:
+      is_esm: ${{ steps.check_esm.outputs.is_esm }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect ESM
+        id: check_esm
+        run: |
+          if grep -q '"type": "module"' package.json; then
+            echo "is_esm=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_esm=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish_esm:
+    needs: detect-esm
+    if: ${{ needs.detect-esm.outputs.is_esm == 'true' }}
+    uses: homebridge/.github/.github/workflows/npm-publish-esm.yml@latest
+    with:
+      node_version: 20
+      tag: ${{ github.event.release.prerelease && github.event.release.tag_name || '' }}
+      npm_version_command: null
+      dynamically_adjust_version: false
+      install_cmd: npm ci
+    secrets:
+      npm_auth_token: ${{ secrets.NPM_TOKEN }}
+
+  publish_cjs:
+    needs: detect-esm
+    if: ${{ needs.detect-esm.outputs.is_esm == 'false' }}
+    uses: homebridge/.github/.github/workflows/npm-publish.yml@latest
+    with:
+      node_version: 20
+      tag: ${{ github.event.release.prerelease && github.event.release.tag_name || '' }}
+      npm_version_command: null
+      dynamically_adjust_version: false
+      install_cmd: npm ci
+    secrets:
+      npm_auth_token: ${{ secrets.NPM_TOKEN }}
