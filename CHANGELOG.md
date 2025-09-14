@@ -9,7 +9,6 @@ All notable changes to this project will be documented in this file. This projec
 
 **Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.2...v2.3.3
 
-
 ## [2.3.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.2) (2025-09-13)
 
 ### What's Changed
