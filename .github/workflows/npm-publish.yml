@@ -20,6 +20,8 @@ jobs:
           fi
 
   publish_esm:
+    permissions:
+      id-token: write
     needs: detect-esm
     if: ${{ needs.detect-esm.outputs.is_esm == 'true' }}
     uses: homebridge/.github/.github/workflows/npm-publish-esm.yml@latest
@@ -33,6 +35,8 @@ jobs:
       npm_auth_token: ${{ secrets.NPM_TOKEN }}
 
   publish_cjs:
+    permissions:
+      id-token: write
     needs: detect-esm
     if: ${{ needs.detect-esm.outputs.is_esm == 'false' }}
     uses: homebridge/.github/.github/workflows/npm-publish.yml@latest
