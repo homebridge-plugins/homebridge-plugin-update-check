@@ -9,28 +9,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Determine whether this is an alpha, beta, or latest release
+  # 1️⃣ Determine release type, ESM status, and branch name
   determine-release-type:
     uses: homebridge/.github/.github/workflows/determine-release-type.yml@latest
     with:
       ref_name: ${{ github.ref_name }}
 
-  # Update the version based on the release type
+  # 2️⃣ Update version and changelog using the scripts
   update-version:
     needs: determine-release-type
     uses: homebridge/.github/.github/workflows/update-version.yml@latest
     with:
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
+      is_esm: ${{ needs.determine-release-type.outputs.is_esm == 'true' }}
 
-  # Publish to NPM and create GitHub release
+  # 3️⃣ Publish to NPM and create GitHub release
   publish-release:
-    needs: [update-version]
+    needs: [determine-release-type, update-version]
     uses: homebridge/.github/.github/workflows/publish-release.yml@latest
     with:
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
       version: ${{ needs.update-version.outputs.version }}
+      is_esm: ${{ needs.determine-release-type.outputs.is_esm == 'true' }}
 
-  # Promote branch if this is a prerelease (alpha/beta)
+  # 4️⃣ Promote branch if this is a prerelease (alpha/beta)
   promote-branch:
     needs: [determine-release-type, publish-release]
     if: ${{ needs.determine-release-type.outputs.release_type != 'latest' && needs.determine-release-type.outputs.release_type != 'skip' }}
@@ -38,12 +40,9 @@ jobs:
     with:
       branch_name: ${{ needs.determine-release-type.outputs.branch_name }}
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
+      is_esm: ${{ needs.determine-release-type.outputs.is_esm == 'true' }}
 
-  trigger-npm-publish:
-    needs: publish-release
-    uses: ./.github/workflows/npm-publish.yml
-
-  # Notify if any previous job fails
+  # 5️⃣ Notify if any previous job fails
   workflow-failure:
     if: ${{ failure() }}
     needs: [determine-release-type, update-version, publish-release, promote-branch]
