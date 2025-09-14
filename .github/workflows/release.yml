@@ -30,6 +30,7 @@ jobs:
     needs: [determine-release-type, update-version]
     permissions:
       id-token: write
+      contents: write
     uses: homebridge/.github/.github/workflows/publish-release.yml@latest
     with:
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
