@@ -1,45 +1,65 @@
-name: Unified Release
+name: Release
 
 on:
   push:
-    branches:
-      - "alpha-*"
-      - "beta-*"
-      - latest
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v2.3.4)'
+        required: true
+        type: string
 
 jobs:
-  determine-release-type:
-    uses: homebridge/.github/.github/workflows/determine-release-type.yml@latest
-    with:
-      ref_name: ${{ github.ref_name }}
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  update-version:
-    needs: determine-release-type
-    uses: homebridge/.github/.github/workflows/update-version.yml@latest
-    with:
-      release_type: ${{ needs.determine-release-type.outputs.release_type }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
-  publish-release:
-    needs: [determine-release-type, update-version]
-    uses: homebridge/.github/.github/workflows/publish-release.yml@latest
-    with:
-      release_type: ${{ needs.determine-release-type.outputs.release_type }}
-      version: ${{ needs.update-version.outputs.version }}
+      - name: Install dependencies
+        run: npm ci
 
-  promote-branch:
-    needs: [determine-release-type, publish-release]
-    if: ${{ needs.determine-release-type.outputs.release_type != 'latest' && needs.determine-release-type.outputs.release_type != 'skip' }}
-    uses: homebridge/.github/.github/workflows/promote-branch.yml@latest
-    with:
-      branch_name: ${{ needs.determine-release-type.outputs.branch_name }}
-      release_type: ${{ needs.determine-release-type.outputs.release_type }}
+      - name: Lint
+        run: npm run lint
 
-  workflow-failure:
-    if: ${{ failure() }}  # Only runs if any job above fails
-    needs: [determine-release-type, update-version, publish-release, promote-branch]
-    uses: homebridge/.github/.github/workflows/report-failure.yml@latest
-    with:
-      workflow_name: ${{ github.workflow }}
-      job_name: ${{ github.job }}
-      run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Get version from tag or input
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: ${{ steps.version.outputs.version }}
+          body: |
+            Release ${{ steps.version.outputs.version }}
+            
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/latest/CHANGELOG.md) for details.
+          draft: false
+          prerelease: false
+
+      - name: Publish to NPM
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
