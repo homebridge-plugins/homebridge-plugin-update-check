@@ -39,6 +39,9 @@ jobs:
       branch_name: ${{ needs.determine-release-type.outputs.branch_name }}
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
 
+  trigger-npm-publish:
+    uses: ./.github/workflows/npm-publish.yml
+
   # Notify if any previous job fails
   workflow-failure:
     if: ${{ failure() }}
