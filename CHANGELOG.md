@@ -4,18 +4,6 @@
 
 * Revert "Merge branch 'latest' of https://github.com/homebridge-plugins/homebridge-plugin-update-check into latest" ([cc07fe1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/cc07fe126a126812f87f5f2ec31b5d429567bfa3))
 * Revert "Merge branch 'latest' of https://github.com/homebridge-plugins/homebridge-plugin-update-check into latest" ([1efa23c](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/1efa23c62d327eac304c59942391f52ae23e3af2))
-
-
-
-## [2.3.5](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.4...v2.3.5) (2025-09-14)
-
-
-
-## [2.3.4](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.2...v2.3.4) (2025-09-14)
-
-
-### Reverts
-
 * Revert "Merge branch 'latest' of https://github.com/homebridge-plugins/homebridge-plugin-update-check into latest" ([6f0dfe4](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/6f0dfe4dde54b834463efde0b653f3ba3c0945e2))
 
 
