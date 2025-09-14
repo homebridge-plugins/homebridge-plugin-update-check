@@ -29,6 +29,7 @@ jobs:
     with:
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
       version: ${{ needs.update-version.outputs.version }}
+    secrets: inherit
 
   # Promote branch if this is a prerelease (alpha/beta)
   promote-branch:
