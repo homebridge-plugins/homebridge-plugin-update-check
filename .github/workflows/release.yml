@@ -24,7 +24,7 @@ jobs:
 
   # Publish to NPM and create GitHub release
   publish-release:
-    needs: [update-version]
+    needs: [determine-release-type, update-version]
     uses: homebridge/.github/.github/workflows/publish-release.yml@latest
     with:
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
@@ -38,10 +38,6 @@ jobs:
     with:
       branch_name: ${{ needs.determine-release-type.outputs.branch_name }}
       release_type: ${{ needs.determine-release-type.outputs.release_type }}
-
-  trigger-npm-publish:
-    needs: publish-release
-    uses: ./.github/workflows/npm-publish.yml
 
   # Notify if any previous job fails
   workflow-failure:
