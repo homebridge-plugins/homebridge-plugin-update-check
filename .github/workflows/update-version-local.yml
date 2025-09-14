@@ -1,0 +1,73 @@
+name: Update Version (Local)
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        required: true
+        type: string
+    outputs:
+      version:
+        description: "The version that was updated to"
+        value: ${{ jobs.update.outputs.version }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install conventional-changelog-cli
+        run: npm install -g conventional-changelog-cli conventional-changelog-angular
+      
+      - name: Update Changelog
+        run: |
+          # Generate new changelog into temp file
+          conventional-changelog -p angular -i CHANGELOG.md -s -r 0 -o CHANGELOG.tmp || true
+          
+          # Check if changelog was generated
+          if [ -f CHANGELOG.tmp ] && [ -s CHANGELOG.tmp ]; then
+            # Get header line
+            HEADER_LINE=$(grep -n "# Changelog" CHANGELOG.md | cut -d: -f1)
+            
+            # Insert new content after header
+            tail -n +3 CHANGELOG.tmp > CHANGELOG.new
+            sed -i "${HEADER_LINE}r CHANGELOG.new" CHANGELOG.md
+            rm CHANGELOG.tmp CHANGELOG.new
+            
+            echo "changelog_updated=true" >> $GITHUB_ENV
+          else
+            echo "No new changelog entries to add"
+            echo "changelog_updated=false" >> $GITHUB_ENV
+            # Remove temp file if it exists but is empty
+            rm -f CHANGELOG.tmp
+          fi
+      
+      - name: Commit Changelog
+        if: env.changelog_updated == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git commit -m "Update changelog for ${{ inputs.release_type }} release" || exit 0
+          git push
+      
+      - name: Get Version
+        id: get-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Bump Version
+        if: inputs.release_type != 'latest'
+        run: |
+          # For non-latest releases, we would bump the version here
+          # For now, keep the existing version
+          echo "Version bump not implemented for ${{ inputs.release_type }}"
