@@ -282,7 +282,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (accInfo) {
       accInfo
         .setCharacteristic(hap.Characteristic.Manufacturer, 'Homebridge')
-        .setCharacteristic(hap.Characteristic.Model, 'PluginUpdate')
+        .setCharacteristic(hap.Characteristic.Model, 'Plugin Update Check')
         .setCharacteristic(hap.Characteristic.SerialNumber, hostname())
     }
 
