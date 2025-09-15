@@ -71,6 +71,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoUpdatePlugins: boolean
   private readonly allowDirectNpmUpdates: boolean
   private readonly autoRestartAfterUpdates: boolean
+  private readonly respectDisabledPlugins: boolean
 
   private service?: Service
 
@@ -111,6 +112,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.autoUpdatePlugins = this.config.autoUpdatePlugins ?? false
     this.allowDirectNpmUpdates = this.config.allowDirectNpmUpdates ?? false
     this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
+    this.respectDisabledPlugins = this.config.respectDisabledPlugins ?? true
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -219,7 +221,21 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
 
       if (this.checkPlugins) {
-        const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+        const allPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+        const filteredPlugins = allPlugins.filter(plugin => 
+          !this.respectDisabledPlugins || !plugin.disabled
+        )
+        
+        // Log information about disabled plugins that are being skipped
+        if (this.respectDisabledPlugins) {
+          const disabledPluginsWithUpdates = allPlugins.filter(plugin => 
+            plugin.disabled && plugin.updateAvailable
+          )
+          
+          disabledPluginsWithUpdates.forEach((plugin) => {
+            this.log.debug(`Skipping update notification for disabled plugin: ${plugin.name} ${plugin.latestVersion} (update notifications disabled in UI-X)`)
+          })
+        }
 
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
