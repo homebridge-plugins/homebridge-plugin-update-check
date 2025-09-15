@@ -59,6 +59,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
+  private readonly failureSensorInfo?: SensorInfo
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
@@ -71,6 +72,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoRestartAfterUpdates: boolean
 
   private service?: Service
+  private failureService?: Service
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
@@ -91,6 +93,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.uiApi = new UiApi(this.api.user.storagePath(), this.log)
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
+    
+    // Initialize failure sensor info if auto-updates are enabled
+    const hasAutoUpdates = this.config.autoUpdateHomebridge || this.config.autoUpdateHomebridgeUI || this.config.autoUpdatePlugins
+    if (hasAutoUpdates) {
+      this.failureSensorInfo = this.getSensorInfo(this.config.failureSensorType)
+    }
 
     this.checkHB = this.config.checkHomebridgeUpdates ?? false
     this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
@@ -113,6 +121,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       const newAccessory = new Accessory('Plugin Update Check', uuid)
 
       newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
+      
+      // Add failure sensor service if auto-updates are enabled
+      if (this.failureSensorInfo) {
+        newAccessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
+      }
 
       this.configureAccessory(newAccessory)
 
@@ -240,7 +253,116 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
 
+    // Perform automatic updates if enabled
+    if (updatesAvailable.length > 0) {
+      await this.performAutomaticUpdates(updatesAvailable)
+    }
+
     return updatesAvailable.length
+  }
+
+  async performAutomaticUpdates(updatesAvailable: InstalledPlugin[]): Promise<void> {
+    // Reset failure sensor to success state at start
+    this.setFailureSensorState(false)
+
+    let updateAttempted = false
+    let updateSuccessful = false
+    let needsRestart = false
+
+    try {
+      // Create backup if UI is available and updates will be performed
+      const willPerformUpdates = this.shouldPerformAnyUpdates(updatesAvailable)
+      if (willPerformUpdates) {
+        this.log.info('Automatic updates enabled - preparing to install updates')
+        
+        if (this.uiApi.isConfigured()) {
+          this.log.info('Creating backup before performing updates')
+          await this.uiApi.createBackup()
+        } else if (!this.allowDirectNpmUpdates) {
+          this.log.warn('Homebridge Config UI not available and direct npm updates not enabled - skipping automatic updates')
+          return
+        }
+      }
+
+      // Process each available update
+      for (const update of updatesAvailable) {
+        let shouldUpdate = false
+        let updateType = ''
+
+        // Determine if this update should be automatically installed
+        if (update.name === 'homebridge' && this.autoUpdateHB) {
+          shouldUpdate = true
+          updateType = 'Homebridge'
+        } else if (update.name === 'homebridge-config-ui-x' && this.autoUpdateHBUI) {
+          shouldUpdate = true
+          updateType = 'Homebridge UI'
+        } else if (update.name !== 'homebridge' && update.name !== 'homebridge-config-ui-x' && 
+                   update.name !== 'Docker image' && this.autoUpdatePlugins) {
+          shouldUpdate = true
+          updateType = 'Plugin'
+        }
+        // Note: Docker updates are intentionally not supported for safety reasons
+
+        if (shouldUpdate) {
+          updateAttempted = true
+          this.log.info(`Attempting automatic update: ${update.name} ${update.installedVersion} → ${update.latestVersion}`)
+
+          let success = false
+          if (update.name === 'homebridge') {
+            success = await this.uiApi.updateHomebridge(update.latestVersion)
+          } else {
+            success = await this.uiApi.updatePlugin(update.name, update.latestVersion)
+          }
+
+          if (success) {
+            this.log.info(`Successfully updated ${updateType}: ${update.name} to ${update.latestVersion}`)
+            updateSuccessful = true
+            needsRestart = true
+          } else {
+            this.log.error(`Failed to update ${updateType}: ${update.name}`)
+            this.setFailureSensorState(true)
+            return // Stop processing further updates on failure
+          }
+        } else {
+          this.log.debug(`Skipping update for ${update.name} - automatic updates not enabled for this component`)
+        }
+      }
+
+      // Restart Homebridge if updates were successful and restart is enabled
+      if (updateSuccessful && needsRestart && this.autoRestartAfterUpdates) {
+        this.log.info('Updates completed successfully - restarting Homebridge to apply changes')
+        await this.uiApi.restartHomebridge()
+      } else if (updateSuccessful && needsRestart) {
+        this.log.info('Updates completed successfully - manual restart required to apply changes')
+      }
+
+    } catch (error) {
+      this.log.error(`Error during automatic updates: ${error}`)
+      this.setFailureSensorState(true)
+    }
+
+    // If updates were attempted but none succeeded, trigger failure sensor
+    if (updateAttempted && !updateSuccessful) {
+      this.setFailureSensorState(true)
+    }
+  }
+
+  private shouldPerformAnyUpdates(updatesAvailable: InstalledPlugin[]): boolean {
+    return updatesAvailable.some(update => {
+      if (update.name === 'homebridge' && this.autoUpdateHB) return true
+      if (update.name === 'homebridge-config-ui-x' && this.autoUpdateHBUI) return true
+      if (update.name !== 'homebridge' && update.name !== 'homebridge-config-ui-x' && 
+          update.name !== 'Docker image' && this.autoUpdatePlugins) return true
+      return false
+    })
+  }
+
+  private setFailureSensorState(failed: boolean): void {
+    if (this.failureService && this.failureSensorInfo) {
+      const value = failed ? this.failureSensorInfo.trippedValue : this.failureSensorInfo.untrippedValue
+      this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, value)
+      this.log.debug(`Set failure sensor to ${failed ? 'triggered' : 'normal'} state`)
+    }
   }
 
   doCheck(): void {
@@ -273,6 +395,27 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     }
   }
 
+  checkFailureService(accessory: PlatformAccessory, serviceType: WithUUID<typeof Service>): boolean {
+    if (!this.failureSensorInfo) return false
+    
+    const service = accessory.getService(serviceType)
+    if (this.failureSensorInfo.serviceType === serviceType) {
+      if (service) {
+        this.failureService = service
+      } else {
+        this.failureService = accessory.addService(serviceType as unknown as Service)
+        this.failureService.setCharacteristic(hap.Characteristic.Name, 'Update Failure')
+      }
+      return true
+    } else {
+      // Don't remove services that might be used by the main sensor
+      if (service && this.sensorInfo.serviceType !== serviceType) {
+        accessory.removeService(service)
+      }
+      return false
+    }
+  }
+
   configureAccessory(accessory: PlatformAccessory): void {
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log(`${accessory.displayName} identify requested!`)
@@ -296,6 +439,20 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.checkService(accessory, hap.Service.CarbonMonoxideSensor)
     this.checkService(accessory, hap.Service.CarbonDioxideSensor)
     this.checkService(accessory, hap.Service.AirQualitySensor)
+
+    // Configure failure service if enabled
+    if (this.failureSensorInfo) {
+      this.checkFailureService(accessory, hap.Service.MotionSensor)
+      this.checkFailureService(accessory, hap.Service.ContactSensor)
+      this.checkFailureService(accessory, hap.Service.OccupancySensor)
+      this.checkFailureService(accessory, hap.Service.SmokeSensor)
+      this.checkFailureService(accessory, hap.Service.LeakSensor)
+      this.checkFailureService(accessory, hap.Service.LightSensor)
+      this.checkFailureService(accessory, hap.Service.HumiditySensor)
+      this.checkFailureService(accessory, hap.Service.CarbonMonoxideSensor)
+      this.checkFailureService(accessory, hap.Service.CarbonDioxideSensor)
+      this.checkFailureService(accessory, hap.Service.AirQualitySensor)
+    }
 
     /* const motionService = accessory.getService(hap.Service.MotionSensor);
     const contactService = accessory.getService(hap.Service.ContactSensor);
@@ -360,6 +517,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     } */
 
     this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
+    this.failureService?.setCharacteristic(this.failureSensorInfo?.characteristicType!, this.failureSensorInfo?.untrippedValue!)
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {
