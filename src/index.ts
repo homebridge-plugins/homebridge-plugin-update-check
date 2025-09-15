@@ -35,6 +35,7 @@ import { InstalledPlugin, UiApi } from './ui-api.js'
 
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
+// eslint-disable-next-line unused-imports/no-unused-vars
 const __dirname = path.dirname(__filename)
 
 let hap: HAP
@@ -161,10 +162,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       },
     )
   }
-
-
-
-
 
   async checkUi(): Promise<number> {
     this.log.debug('Searching for available updates ...')

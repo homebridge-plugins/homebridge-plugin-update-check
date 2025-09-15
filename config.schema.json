@@ -105,14 +105,14 @@
       },
       "autoUpdateHomebridgeUI": {
         "title": "Auto-update Homebridge Config UI",
-        "type": "boolean", 
+        "type": "boolean",
         "description": "Automatically install Homebridge Config UI updates when available (requires homebridge-config-ui-x and sufficient npm privileges)",
         "default": false
       },
       "autoUpdatePlugins": {
         "title": "Auto-update plugins",
         "type": "boolean",
-        "description": "Automatically install plugin updates when available (requires homebridge-config-ui-x and sufficient npm privileges)", 
+        "description": "Automatically install plugin updates when available (requires homebridge-config-ui-x and sufficient npm privileges)",
         "default": false
       },
       "allowDirectNpmUpdates": {

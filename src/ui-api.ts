@@ -56,7 +56,8 @@ export class UiApi {
     axiosRetry(axios, {
       retries: 3,
       retryDelay: (...arg) => axiosRetry.exponentialDelay(...arg, 1000),
-      
+
+      // eslint-disable-next-line unused-imports/no-unused-vars
       onRetry: (retryCount, error, _requestConfig) => {
         this.log.debug(`retry count: ${retryCount}, error: ${error.message}`)
       },
@@ -128,20 +129,24 @@ export class UiApi {
 
     if (this.isConfigured() && currentDockerVersion !== undefined) {
       const json = await this.makeDockerCall('/v2/repositories/homebridge/homebridge/tags/?page_size=30&page=1&ordering=last_updated')
-      const versions = json.results as any[]
+      const images = json.results as any[]
 
-      const installedVersion = versions.filter(version => version.name === currentDockerVersion)[0]
-      const installedVersionDate = Date.parse(installedVersion.last_updated)
+      // If the currently installed version is not returned in the list of Docker versions (too old or deleted),
+      // then use a last-updated date Jan 1, 1970
+      const installedImage = images.filter(image => image.name === currentDockerVersion)[0] ?? undefined
+      const installedImageDate = Date.parse(installedImage ? installedImage.last_updated : '1970-01-01T00:00:00.000000Z')
 
-      const availableVersions = versions.filter(version =>
-        !(version.name as string).includes('beta') &&
-        (Date.parse(version.last_updated) > installedVersionDate),
+      // Filter for version names YYYY-MM-DD (no alphas or betas)
+      const regex: RegExp = /^\d{4}-\d{2}-\d{2}$/gm
+      const availableImages = images.filter(image =>
+        (image.name as string).match(regex) &&
+        (Date.parse(image.last_updated) > installedImageDate),
       )
-      if (availableVersions.length > 0) {
+      if (availableImages.length > 0) {
         dockerInfo = {
           name: 'Docker image',
-          installedVersion: installedVersion,
-          latestVersion: availableVersions[0].name,
+          installedVersion: currentDockerVersion,
+          latestVersion: availableImages[0].name,
           updateAvailable: true,
         }
       }
