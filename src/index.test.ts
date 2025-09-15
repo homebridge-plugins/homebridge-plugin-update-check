@@ -34,6 +34,7 @@ describe('Plugin Configuration', () => {
     expect(plugin.disabled).toBeUndefined()
     expect(plugin.name).toBe('test-plugin')
     expect(plugin.updateAvailable).toBe(true)
+  })
     
   it('should have automatic update functionality available', () => {
     // Test that automatic update methods exist in the compiled code
