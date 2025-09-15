@@ -2,6 +2,14 @@
 set -euo pipefail
 
 # ensure-publishable-version.sh
+# 
+# NOTE: This script is downloaded from homebridge/.github at:
+# https://raw.githubusercontent.com/homebridge/.github/latest/.github/scripts/ensure-publishable-version.sh
+#
+# It exists locally because the reusable workflow publish-release.yml@latest expects it to be
+# present at .github/scripts/ensure-publishable-version.sh but does not download it automatically.
+# This should be addressed in the reusable workflow to download the script like other scripts.
+#
 # Usage: ensure-publishable-version.sh <release_type> <max_attempts>
 # Writes NPM_VERSION to $GITHUB_OUTPUT when run inside GitHub Actions, otherwise prints it to stdout.
 
