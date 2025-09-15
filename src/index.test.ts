@@ -16,7 +16,7 @@ describe('Plugin Configuration', () => {
     
     // Verify that automatic update functionality is compiled
     expect(compiledCode).toContain('performAutomaticUpdates')
-    expect(compiledCode).toContain('setFailureSensorState')
+    expect(compiledCode).toContain('FailureSensor')
     expect(compiledCode).toContain('shouldPerformAnyUpdates')
   })
 })

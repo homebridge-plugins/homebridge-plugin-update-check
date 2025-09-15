@@ -32,6 +32,7 @@ import { Cron } from 'croner'
 
 // eslint-disable-next-line ts/consistent-type-imports
 import { InstalledPlugin, UiApi } from './ui-api.js'
+import { FailureSensor } from './failureSensor.js'
 
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -59,7 +60,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
-  private readonly failureSensorInfo?: SensorInfo
+  private readonly failureSensor?: FailureSensor
   private readonly checkHB: boolean
   private readonly checkHBUI: boolean
   private readonly checkPlugins: boolean
@@ -72,7 +73,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoRestartAfterUpdates: boolean
 
   private service?: Service
-  private failureService?: Service
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
@@ -94,10 +94,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
     
-    // Initialize failure sensor info if auto-updates are enabled
+    // Initialize failure sensor if auto-updates are enabled
     const hasAutoUpdates = this.config.autoUpdateHomebridge || this.config.autoUpdateHomebridgeUI || this.config.autoUpdatePlugins
     if (hasAutoUpdates) {
-      this.failureSensorInfo = this.getSensorInfo(this.config.failureSensorType)
+      this.failureSensor = new FailureSensor(this.log, this.api, this.config.failureSensorType)
     }
 
     this.checkHB = this.config.checkHomebridgeUpdates ?? false
@@ -123,8 +123,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
       
       // Add failure sensor service if auto-updates are enabled
-      if (this.failureSensorInfo) {
-        newAccessory.addService(this.failureSensorInfo.serviceType as unknown as Service)
+      if (this.failureSensor) {
+        this.failureSensor.addToAccessory(newAccessory)
       }
 
       this.configureAccessory(newAccessory)
@@ -263,7 +263,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   async performAutomaticUpdates(updatesAvailable: InstalledPlugin[]): Promise<void> {
     // Reset failure sensor to success state at start
-    this.setFailureSensorState(false)
+    this.failureSensor?.setState(false)
 
     let updateAttempted = false
     let updateSuccessful = false
@@ -320,7 +320,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             needsRestart = true
           } else {
             this.log.error(`Failed to update ${updateType}: ${update.name}`)
-            this.setFailureSensorState(true)
+            this.failureSensor?.setState(true)
             return // Stop processing further updates on failure
           }
         } else {
@@ -338,12 +338,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     } catch (error) {
       this.log.error(`Error during automatic updates: ${error}`)
-      this.setFailureSensorState(true)
+      this.failureSensor?.setState(true)
     }
 
     // If updates were attempted but none succeeded, trigger failure sensor
     if (updateAttempted && !updateSuccessful) {
-      this.setFailureSensorState(true)
+      this.failureSensor?.setState(true)
     }
   }
 
@@ -355,14 +355,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
           update.name !== 'Docker image' && this.autoUpdatePlugins) return true
       return false
     })
-  }
-
-  private setFailureSensorState(failed: boolean): void {
-    if (this.failureService && this.failureSensorInfo) {
-      const value = failed ? this.failureSensorInfo.trippedValue : this.failureSensorInfo.untrippedValue
-      this.failureService.setCharacteristic(this.failureSensorInfo.characteristicType, value)
-      this.log.debug(`Set failure sensor to ${failed ? 'triggered' : 'normal'} state`)
-    }
   }
 
   doCheck(): void {
@@ -395,27 +387,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     }
   }
 
-  checkFailureService(accessory: PlatformAccessory, serviceType: WithUUID<typeof Service>): boolean {
-    if (!this.failureSensorInfo) return false
-    
-    const service = accessory.getService(serviceType)
-    if (this.failureSensorInfo.serviceType === serviceType) {
-      if (service) {
-        this.failureService = service
-      } else {
-        this.failureService = accessory.addService(serviceType as unknown as Service)
-        this.failureService.setCharacteristic(hap.Characteristic.Name, 'Update Failure')
-      }
-      return true
-    } else {
-      // Don't remove services that might be used by the main sensor
-      if (service && this.sensorInfo.serviceType !== serviceType) {
-        accessory.removeService(service)
-      }
-      return false
-    }
-  }
-
   configureAccessory(accessory: PlatformAccessory): void {
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log(`${accessory.displayName} identify requested!`)
@@ -441,17 +412,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.checkService(accessory, hap.Service.AirQualitySensor)
 
     // Configure failure service if enabled
-    if (this.failureSensorInfo) {
-      this.checkFailureService(accessory, hap.Service.MotionSensor)
-      this.checkFailureService(accessory, hap.Service.ContactSensor)
-      this.checkFailureService(accessory, hap.Service.OccupancySensor)
-      this.checkFailureService(accessory, hap.Service.SmokeSensor)
-      this.checkFailureService(accessory, hap.Service.LeakSensor)
-      this.checkFailureService(accessory, hap.Service.LightSensor)
-      this.checkFailureService(accessory, hap.Service.HumiditySensor)
-      this.checkFailureService(accessory, hap.Service.CarbonMonoxideSensor)
-      this.checkFailureService(accessory, hap.Service.CarbonDioxideSensor)
-      this.checkFailureService(accessory, hap.Service.AirQualitySensor)
+    if (this.failureSensor) {
+      this.failureSensor.configureService(accessory)
     }
 
     /* const motionService = accessory.getService(hap.Service.MotionSensor);
@@ -517,7 +479,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     } */
 
     this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
-    this.failureService?.setCharacteristic(this.failureSensorInfo?.characteristicType!, this.failureSensorInfo?.untrippedValue!)
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {
