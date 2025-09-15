@@ -34,5 +34,18 @@ describe('Plugin Configuration', () => {
     expect(plugin.disabled).toBeUndefined()
     expect(plugin.name).toBe('test-plugin')
     expect(plugin.updateAvailable).toBe(true)
+    
+  it('should have automatic update functionality available', () => {
+    // Test that automatic update methods exist in the compiled code
+    const fs = require('node:fs')
+    const path = require('node:path')
+    
+    const distPath = path.join(__dirname, '..', 'dist', 'index.js')
+    const compiledCode = fs.readFileSync(distPath, 'utf8')
+    
+    // Verify that automatic update functionality is compiled
+    expect(compiledCode).toContain('performAutomaticUpdates')
+    expect(compiledCode).toContain('FailureSensor')
+    expect(compiledCode).toContain('shouldPerformAnyUpdates')
   })
 })
