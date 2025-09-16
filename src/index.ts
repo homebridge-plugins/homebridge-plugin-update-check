@@ -174,7 +174,15 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     // Get ignored plugins from API if respectDisabledPlugins is enabled
     let ignoredPlugins: string[] = []
     if (this.respectDisabledPlugins) {
-      ignoredPlugins = await this.uiApi.getIgnoredPlugins()
+      try {
+        ignoredPlugins = await this.uiApi.getIgnoredPlugins()
+        this.log.debug(`Retrieved ${ignoredPlugins.length} ignored plugin(s) from homebridge-config-ui-x: ${ignoredPlugins.join(', ')}`)
+      } catch (error) {
+        this.log.warn(`Failed to retrieve ignored plugins list, filtering disabled: ${error}`)
+        ignoredPlugins = []
+      }
+    } else {
+      this.log.debug('respectDisabledPlugins is disabled, skipping plugin filtering')
     }
 
     if (this.checkHB) {
@@ -228,6 +236,8 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
 
       if (this.checkPlugins) {
+        this.log.debug(`Checking ${plugins.length} plugins for updates (respectDisabledPlugins: ${this.respectDisabledPlugins})`)
+        
         const filteredPlugins = plugins.filter(plugin => {
           // Always exclude homebridge-config-ui-x
           if (plugin.name === 'homebridge-config-ui-x') {
@@ -237,12 +247,15 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
           // If respectDisabledPlugins is enabled, check API ignored list
           if (this.respectDisabledPlugins) {
             if (ignoredPlugins.includes(plugin.name)) {
+              this.log.debug(`Filtering out plugin ${plugin.name} (ignored in homebridge-config-ui-x)`)
               return false
             }
           }
           
           return true
         })
+
+        this.log.debug(`After filtering: ${filteredPlugins.length} plugins to check for updates`)
 
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
@@ -265,7 +278,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             ignoredPlugins.includes(plugin.name)
           )
           if (ignoredWithUpdates.length > 0) {
-            this.log.debug(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
+            this.log.info(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
           }
         }
       }
@@ -287,6 +300,15 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     }
 
     this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+    
+    // Provide additional diagnostic information in debug mode
+    if (this.respectDisabledPlugins && ignoredPlugins.length > 0) {
+      this.log.debug(`Filtering enabled with ${ignoredPlugins.length} ignored plugins: ${ignoredPlugins.join(', ')}`)
+    } else if (this.respectDisabledPlugins) {
+      this.log.debug('Filtering enabled but no ignored plugins found')
+    } else {
+      this.log.debug('Plugin filtering is disabled (respectDisabledPlugins: false)')
+    }
 
     return updatesAvailable.length
   }
