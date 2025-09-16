@@ -102,4 +102,81 @@ describe('Plugin Update Filtering', () => {
     expect(ignoredWithUpdates).toHaveLength(1)
     expect(ignoredWithUpdates[0].name).toBe('homebridge-plugin-ignored')
   })
+
+  it('should filter plugins based on disabled property (legacy support)', () => {
+    const mockPlugins = [
+      {
+        name: 'homebridge-plugin-1',
+        installedVersion: '1.0.0',
+        latestVersion: '1.1.0',
+        updateAvailable: true,
+        disabled: false,
+      },
+      {
+        name: 'homebridge-plugin-2',
+        installedVersion: '2.0.0',
+        latestVersion: '2.1.0',
+        updateAvailable: true,
+        disabled: true,
+      },
+      {
+        name: 'homebridge-plugin-3',
+        installedVersion: '3.0.0',
+        latestVersion: '3.1.0',
+        updateAvailable: true,
+      },
+    ]
+
+    // Test filtering with disabled property (legacy approach)
+    const filteredPlugins = mockPlugins.filter(plugin => 
+      plugin.name !== 'homebridge-config-ui-x' && 
+      plugin.disabled !== true
+    )
+
+    expect(filteredPlugins).toHaveLength(2)
+    expect(filteredPlugins.map(p => p.name)).toEqual(['homebridge-plugin-1', 'homebridge-plugin-3'])
+  })
+
+  it('should support combined filtering with ignore list and disabled property', () => {
+    const mockPlugins = [
+      {
+        name: 'homebridge-plugin-1',
+        installedVersion: '1.0.0',
+        latestVersion: '1.1.0',
+        updateAvailable: true,
+      },
+      {
+        name: 'homebridge-plugin-2',
+        installedVersion: '2.0.0',
+        latestVersion: '2.1.0',
+        updateAvailable: true,
+        disabled: true,
+      },
+      {
+        name: 'homebridge-plugin-3',
+        installedVersion: '3.0.0',
+        latestVersion: '3.1.0',
+        updateAvailable: true,
+      },
+    ]
+
+    const ignoredPlugins = ['homebridge-plugin-3']
+
+    // Test combined filtering (both API ignore list and legacy disabled property)
+    const filteredPlugins = mockPlugins.filter(plugin => {
+      if (plugin.name === 'homebridge-config-ui-x') {
+        return false
+      }
+      if (ignoredPlugins.includes(plugin.name)) {
+        return false
+      }
+      if (plugin.disabled === true) {
+        return false
+      }
+      return true
+    })
+
+    expect(filteredPlugins).toHaveLength(1)
+    expect(filteredPlugins[0].name).toBe('homebridge-plugin-1')
+  })
 })
