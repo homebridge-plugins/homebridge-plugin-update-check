@@ -178,7 +178,7 @@
       "respectDisabledPlugins": {
         "title": "Respect disabled plugin update notifications",
         "type": "boolean",
-        "description": "Skip update notifications and auto-updates for plugins that have 'Disable Update Notifications' enabled in Homebridge Config UI-X",
+        "description": "When enabled, respects the 'Hide update notifications for this plugin' setting from homebridge-config-ui-x. Plugins marked to hide updates will not trigger notifications.",
         "default": true
       }
     },
