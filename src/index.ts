@@ -220,15 +220,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             return false
           }
           
-          // If respectDisabledPlugins is enabled, apply filtering
+          // If respectDisabledPlugins is enabled, check API ignored list
           if (this.respectDisabledPlugins) {
-            // Primary method: Check API ignored list
             if (ignoredPlugins.includes(plugin.name)) {
-              return false
-            }
-            
-            // Secondary method: Check legacy disabled property for backward compatibility
-            if (plugin.disabled === true) {
               return false
             }
           }
@@ -254,7 +248,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
           const ignoredWithUpdates = plugins.filter(plugin => 
             plugin.name !== 'homebridge-config-ui-x' && 
             plugin.updateAvailable &&
-            (ignoredPlugins.includes(plugin.name) || plugin.disabled === true)
+            ignoredPlugins.includes(plugin.name)
           )
           if (ignoredWithUpdates.length > 0) {
             this.log.debug(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)

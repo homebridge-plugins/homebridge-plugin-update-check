@@ -25,7 +25,6 @@ export interface InstalledPlugin {
   installedVersion: string
   latestVersion: string
   updateAvailable: boolean
-  disabled?: boolean
 }
 
 interface SecretsFile {
