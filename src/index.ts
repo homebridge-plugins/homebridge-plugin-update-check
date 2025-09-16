@@ -186,6 +186,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     if (this.checkHBUI || this.checkPlugins) {
       const plugins = await this.uiApi.getPlugins()
+      const ignoredPlugins = await this.uiApi.getIgnoredPlugins()
 
       if (this.checkHBUI) {
         const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
@@ -206,7 +207,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
 
       if (this.checkPlugins) {
-        const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+        const filteredPlugins = plugins.filter(plugin => 
+          plugin.name !== 'homebridge-config-ui-x' && 
+          !ignoredPlugins.includes(plugin.name)
+        )
 
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
@@ -220,6 +224,14 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             this.pluginUpdates.push(version)
           }
         })
+
+        // Log ignored plugins if any updates are available for them
+        const ignoredWithUpdates = plugins.filter(plugin => 
+          ignoredPlugins.includes(plugin.name) && plugin.updateAvailable
+        )
+        if (ignoredWithUpdates.length > 0) {
+          this.log.debug(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
+        }
       }
     }
 

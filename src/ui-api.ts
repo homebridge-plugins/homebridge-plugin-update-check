@@ -117,6 +117,19 @@ export class UiApi {
     }
   }
 
+  public async getIgnoredPlugins(): Promise<Array<string>> {
+    if (this.isConfigured()) {
+      try {
+        return await this.makeCall('/config-editor/ui/plugins/hide-updates-for') as Array<string>
+      } catch (error) {
+        this.log.warn(`Failed to retrieve ignored plugins list: ${error}`)
+        return []
+      }
+    } else {
+      return []
+    }
+  }
+
   public async getDocker(): Promise<InstalledPlugin> {
     const currentDockerVersion = process.env.DOCKER_HOMEBRIDGE_VERSION
 
