@@ -49,9 +49,11 @@ export class UiApi {
   private token?: string
   private readonly dockerUrl?: string
   private readonly cacheable: CacheableLookup
+  private readonly hbStoragePath: string
 
   constructor(hbStoragePath: string, log: Logging) {
     this.log = log
+    this.hbStoragePath = hbStoragePath
 
     axiosRetry(axios, {
       retries: 3,
@@ -112,6 +114,19 @@ export class UiApi {
   public async getPlugins(): Promise<Array<InstalledPlugin>> {
     if (this.isConfigured()) {
       return await this.makeCall('/api/plugins') as Array<InstalledPlugin>
+    } else {
+      return []
+    }
+  }
+
+  public async getIgnoredPlugins(): Promise<Array<string>> {
+    if (this.isConfigured()) {
+      try {
+        return await this.makeCall('/config-editor/ui/plugins/hide-updates-for') as Array<string>
+      } catch (error) {
+        this.log.warn(`Failed to retrieve ignored plugins list: ${error}`)
+        return []
+      }
     } else {
       return []
     }

@@ -69,6 +69,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoUpdatePlugins: boolean
   private readonly allowDirectNpmUpdates: boolean
   private readonly autoRestartAfterUpdates: boolean
+  private readonly respectDisabledPlugins: boolean
 
   private service?: Service
 
@@ -103,6 +104,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.autoUpdatePlugins = this.config.autoUpdatePlugins ?? false
     this.allowDirectNpmUpdates = this.config.allowDirectNpmUpdates ?? false
     this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
+    this.respectDisabledPlugins = this.config.respectDisabledPlugins ?? true
 
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
@@ -186,6 +188,12 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     if (this.checkHBUI || this.checkPlugins) {
       const plugins = await this.uiApi.getPlugins()
+      let ignoredPlugins: string[] = []
+      
+      // Get ignored plugins from API if respectDisabledPlugins is enabled
+      if (this.respectDisabledPlugins) {
+        ignoredPlugins = await this.uiApi.getIgnoredPlugins()
+      }
 
       if (this.checkHBUI) {
         const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
@@ -206,7 +214,21 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
 
       if (this.checkPlugins) {
-        const filteredPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+        const filteredPlugins = plugins.filter(plugin => {
+          // Always exclude homebridge-config-ui-x
+          if (plugin.name === 'homebridge-config-ui-x') {
+            return false
+          }
+          
+          // If respectDisabledPlugins is enabled, check API ignored list
+          if (this.respectDisabledPlugins) {
+            if (ignoredPlugins.includes(plugin.name)) {
+              return false
+            }
+          }
+          
+          return true
+        })
 
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
@@ -220,6 +242,18 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             this.pluginUpdates.push(version)
           }
         })
+
+        // Log ignored plugins if any updates are available for them (only when respectDisabledPlugins is enabled)
+        if (this.respectDisabledPlugins) {
+          const ignoredWithUpdates = plugins.filter(plugin => 
+            plugin.name !== 'homebridge-config-ui-x' && 
+            plugin.updateAvailable &&
+            ignoredPlugins.includes(plugin.name)
+          )
+          if (ignoredWithUpdates.length > 0) {
+            this.log.debug(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
+          }
+        }
       }
     }
 

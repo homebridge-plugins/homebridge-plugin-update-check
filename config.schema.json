@@ -174,6 +174,12 @@
             "enum": ["monoxide"]
           }
         ]
+      },
+      "respectDisabledPlugins": {
+        "title": "Respect disabled plugin update notifications",
+        "type": "boolean",
+        "description": "When enabled, respects the 'Hide update notifications for this plugin' setting from homebridge-config-ui-x. Plugins marked to hide updates will not trigger notifications.",
+        "default": true
       }
     },
     "required": ["name", "sensorType"]
