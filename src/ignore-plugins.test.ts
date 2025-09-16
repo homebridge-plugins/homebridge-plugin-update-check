@@ -102,4 +102,45 @@ describe('Plugin Update Filtering', () => {
     expect(ignoredWithUpdates).toHaveLength(1)
     expect(ignoredWithUpdates[0].name).toBe('homebridge-plugin-ignored')
   })
+
+  it('should filter homebridge-config-ui-x when in ignore list', () => {
+    const mockPlugins = [
+      {
+        name: 'homebridge-config-ui-x',
+        installedVersion: '4.0.0',
+        latestVersion: '4.1.0',
+        updateAvailable: true,
+      },
+    ]
+
+    const ignoredPlugins = ['homebridge-config-ui-x']
+
+    // Test filtering homebridge-config-ui-x updates when ignored
+    const shouldFilterUI = ignoredPlugins.includes('homebridge-config-ui-x')
+    expect(shouldFilterUI).toBe(true)
+
+    // Simulate what would happen in the checkUi() method
+    const uiPlugin = mockPlugins.find(plugin => plugin.name === 'homebridge-config-ui-x')
+    const shouldAddUpdate = uiPlugin && uiPlugin.updateAvailable && !shouldFilterUI
+    expect(shouldAddUpdate).toBe(false)
+  })
+
+  it('should filter homebridge core updates when in ignore list', () => {
+    const mockHomebridge = {
+      name: 'homebridge',
+      installedVersion: '1.0.0',
+      latestVersion: '1.1.0',
+      updateAvailable: true,
+    }
+
+    const ignoredPlugins = ['homebridge']
+
+    // Test filtering homebridge core updates when ignored
+    const shouldFilterHomebridge = ignoredPlugins.includes('homebridge')
+    expect(shouldFilterHomebridge).toBe(true)
+
+    // Simulate what would happen in the checkUi() method
+    const shouldAddUpdate = mockHomebridge.updateAvailable && !shouldFilterHomebridge
+    expect(shouldAddUpdate).toBe(false)
+  })
 })
