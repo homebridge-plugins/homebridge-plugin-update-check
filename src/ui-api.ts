@@ -25,7 +25,6 @@ export interface InstalledPlugin {
   installedVersion: string
   latestVersion: string
   updateAvailable: boolean
-  disabled?: boolean
 }
 
 interface SecretsFile {
@@ -114,22 +113,7 @@ export class UiApi {
 
   public async getPlugins(): Promise<Array<InstalledPlugin>> {
     if (this.isConfigured()) {
-      const plugins = await this.makeCall('/api/plugins') as Array<InstalledPlugin>
-      
-      // Try to get disabled plugin update notifications settings
-      try {
-        const disabledPlugins = await this.getDisabledPluginUpdates()
-        
-        // Merge the disabled status into the plugin data
-        return plugins.map(plugin => ({
-          ...plugin,
-          disabled: disabledPlugins.includes(plugin.name),
-        }))
-      } catch (error) {
-        this.log.debug(`Could not retrieve disabled plugin settings: ${error}`)
-        // Return plugins without disabled status if settings are not available
-        return plugins
-      }
+      return await this.makeCall('/api/plugins') as Array<InstalledPlugin>
     } else {
       return []
     }
@@ -144,107 +128,6 @@ export class UiApi {
         return []
       }
     } else {
-  /**
-   * Get the list of plugins that have disabled update notifications
-   */
-  private async getDisabledPluginUpdates(): Promise<string[]> {
-    try {
-      // Try different potential endpoints for UI settings
-      const settingsEndpoints = [
-        '/api/settings/ui',
-        '/api/config-editor/ui-settings', 
-        '/api/server/settings',
-        '/api/plugins/settings',
-        '/api/settings'
-      ]
-      
-      for (const endpoint of settingsEndpoints) {
-        try {
-          const settings = await this.makeCall(endpoint) as any
-          
-          // Look for disabled plugin update notifications in various possible structures
-          if (settings?.disabledPluginUpdateNotifications) {
-            return Array.isArray(settings.disabledPluginUpdateNotifications) 
-              ? settings.disabledPluginUpdateNotifications 
-              : []
-          }
-          
-          if (settings?.ui?.disabledPluginUpdateNotifications) {
-            return Array.isArray(settings.ui.disabledPluginUpdateNotifications)
-              ? settings.ui.disabledPluginUpdateNotifications
-              : []
-          }
-          
-          if (settings?.plugins?.disabledUpdateNotifications) {
-            return Array.isArray(settings.plugins.disabledUpdateNotifications)
-              ? settings.plugins.disabledUpdateNotifications
-              : []
-          }
-          
-          // Check if the settings contain individual plugin configurations
-          if (settings?.plugins && typeof settings.plugins === 'object') {
-            const disabledPlugins = Object.keys(settings.plugins).filter(pluginName => {
-              const pluginSettings = settings.plugins[pluginName]
-              return pluginSettings?.disableUpdateNotifications === true ||
-                     pluginSettings?.disabled === true ||
-                     pluginSettings?.updateNotificationsDisabled === true
-            })
-            if (disabledPlugins.length > 0) {
-              return disabledPlugins
-            }
-          }
-        } catch (endpointError) {
-          this.log.debug(`Settings endpoint ${endpoint} failed: ${endpointError}`)
-          continue
-        }
-      }
-      
-      // If no settings found through API, try filesystem fallback
-      return await this.getDisabledPluginUpdatesFromFile()
-    } catch (error) {
-      this.log.debug(`Failed to get disabled plugin settings: ${error}`)
-      return []
-    }
-  }
-
-  /**
-   * Fallback method to read disabled plugin settings from filesystem
-   */
-  private async getDisabledPluginUpdatesFromFile(): Promise<string[]> {
-    try {
-      const fs = await import('node:fs')
-      const path = await import('node:path')
-      
-      // Try to read the homebridge-config-ui-x settings file
-      const uiSettingsPath = path.resolve(this.hbStoragePath, '.uix-ui-settings')
-      
-      if (fs.existsSync(uiSettingsPath)) {
-        const settingsData = fs.readFileSync(uiSettingsPath, 'utf8')
-        const settings = JSON.parse(settingsData)
-        
-        if (settings?.disabledPluginUpdateNotifications && Array.isArray(settings.disabledPluginUpdateNotifications)) {
-          return settings.disabledPluginUpdateNotifications
-        }
-        
-        if (settings?.ui?.disabledPluginUpdateNotifications && Array.isArray(settings.ui.disabledPluginUpdateNotifications)) {
-          return settings.ui.disabledPluginUpdateNotifications
-        }
-      }
-      
-      // Also try config-ui-x.json if it exists
-      const configUiPath = path.resolve(this.hbStoragePath, 'config-ui-x.json')
-      if (fs.existsSync(configUiPath)) {
-        const configData = fs.readFileSync(configUiPath, 'utf8')
-        const config = JSON.parse(configData)
-        
-        if (config?.disabledPluginUpdateNotifications && Array.isArray(config.disabledPluginUpdateNotifications)) {
-          return config.disabledPluginUpdateNotifications
-        }
-      }
-      
-      return []
-    } catch (error) {
-      this.log.debug(`Failed to read disabled plugin settings from file: ${error}`)
       return []
     }
   }
