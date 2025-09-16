@@ -122,12 +122,29 @@ export class UiApi {
   public async getIgnoredPlugins(): Promise<Array<string>> {
     if (this.isConfigured()) {
       try {
-        return await this.makeCall('/config-editor/ui/plugins/hide-updates-for') as Array<string>
-      } catch (error) {
-        this.log.warn(`Failed to retrieve ignored plugins list: ${error}`)
+        this.log.debug('Calling /config-editor/ui/plugins/hide-updates-for API endpoint')
+        const result = await this.makeCall('/config-editor/ui/plugins/hide-updates-for')
+        
+        // Validate the response format
+        if (!Array.isArray(result)) {
+          this.log.warn(`Unexpected response format from ignored plugins API: ${typeof result}, expected array`)
+          return []
+        }
+        
+        const ignoredPlugins = result as Array<string>
+        this.log.debug(`API returned ${ignoredPlugins.length} ignored plugins: ${ignoredPlugins.join(', ')}`)
+        return ignoredPlugins
+      } catch (error: any) {
+        // Check if it's a 404 error (API endpoint doesn't exist)
+        if (error?.response?.status === 404) {
+          this.log.warn('Ignored plugins API endpoint not found - requires homebridge-config-ui-x v5.6.2-beta.2 or later')
+        } else {
+          this.log.warn(`Failed to retrieve ignored plugins list from /config-editor/ui/plugins/hide-updates-for: ${error}`)
+        }
         return []
       }
     } else {
+      this.log.debug('homebridge-config-ui-x not configured, cannot retrieve ignored plugins list')
       return []
     }
   }
