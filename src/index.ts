@@ -201,6 +201,18 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
     if (this.checkHBUI || this.checkPlugins) {
       const plugins = await this.uiApi.getPlugins()
+      
+      // Debug logging to understand what data we're getting from the API
+      this.log.debug(`Retrieved ${plugins.length} plugins from UI API`)
+      if (this.respectDisabledPlugins) {
+        const pluginsWithDisabledInfo = plugins.filter(plugin => plugin.disabled !== undefined)
+        this.log.debug(`${pluginsWithDisabledInfo.length} plugins have disabled status information`)
+        
+        const disabledPlugins = plugins.filter(plugin => plugin.disabled === true)
+        if (disabledPlugins.length > 0) {
+          this.log.debug(`Found ${disabledPlugins.length} plugins with disabled update notifications: ${disabledPlugins.map(p => p.name).join(', ')}`)
+        }
+      }
 
       if (this.checkHBUI) {
         const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
@@ -222,20 +234,25 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
       if (this.checkPlugins) {
         const allPlugins = plugins.filter(plugin => plugin.name !== 'homebridge-config-ui-x')
+        
+        if (this.respectDisabledPlugins) {
+          const pluginsWithUpdates = allPlugins.filter(plugin => plugin.updateAvailable)
+          const disabledPluginsWithUpdates = pluginsWithUpdates.filter(plugin => plugin.disabled)
+          const enabledPluginsWithUpdates = pluginsWithUpdates.filter(plugin => !plugin.disabled)
+          
+          this.log.debug(`Plugin update check: ${pluginsWithUpdates.length} total with updates, ${disabledPluginsWithUpdates.length} disabled, ${enabledPluginsWithUpdates.length} enabled`)
+          
+          if (disabledPluginsWithUpdates.length > 0) {
+            this.log.info(`Respecting disabled update notifications for ${disabledPluginsWithUpdates.length} plugin(s): ${disabledPluginsWithUpdates.map(p => p.name).join(', ')}`)
+            disabledPluginsWithUpdates.forEach((plugin) => {
+              this.log.debug(`Skipping update notification for disabled plugin: ${plugin.name} ${plugin.latestVersion} (update notifications disabled in homebridge-config-ui-x)`)
+            })
+          }
+        }
+        
         const filteredPlugins = allPlugins.filter(plugin => 
           !this.respectDisabledPlugins || !plugin.disabled
         )
-        
-        // Log information about disabled plugins that are being skipped
-        if (this.respectDisabledPlugins) {
-          const disabledPluginsWithUpdates = allPlugins.filter(plugin => 
-            plugin.disabled && plugin.updateAvailable
-          )
-          
-          disabledPluginsWithUpdates.forEach((plugin) => {
-            this.log.debug(`Skipping update notification for disabled plugin: ${plugin.name} ${plugin.latestVersion} (update notifications disabled in UI-X)`)
-          })
-        }
 
         filteredPlugins.forEach((plugin) => {
           if (plugin.updateAvailable) {
