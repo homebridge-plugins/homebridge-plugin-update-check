@@ -60,3 +60,16 @@ jobs:
       workflow_name: ${{ github.workflow }}
       job_name: ${{ github.job }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      
+  # 6️⃣ Post to Discord
+  github-releases-to-discord:
+    name: Discord Webhooks
+    needs: [determine-release-type, update-version, publish-release]
+    uses: homebridge/.github/.github/workflows/discord-webhooks.yml@latest
+    with:
+      title: "Plugin Update Check Release"
+      description: |
+        Version `v${{ needs.update-version.outputs.version }}`
+      url: "https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v${{ needs.update-version.outputs.version }}"
+    secrets:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL_LATEST }}
