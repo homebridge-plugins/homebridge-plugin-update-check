@@ -1,5 +1,5 @@
+/* eslint-disable style/brace-style */
 /* eslint-disable style/operator-linebreak */
-/* eslint-disable object-shorthand */
 /* eslint no-console: ["error", { allow: ["info", "warn", "error"] }] */
 
 import type {
@@ -59,9 +59,8 @@ export class UiApi {
       retries: 3,
       retryDelay: (...arg) => axiosRetry.exponentialDelay(...arg, 1000),
 
-      // eslint-disable-next-line unused-imports/no-unused-vars
-      onRetry: (retryCount, error, _requestConfig) => {
-        this.log.debug(`retry count: ${retryCount}, error: ${error.message}`)
+      onRetry: (retryCount, error, requestConfig) => {
+        this.log.debug(`${requestConfig.url} - retry count: ${retryCount}, error: ${error.message}`)
       },
     })
     this.cacheable = new CacheableLookup()
@@ -357,12 +356,27 @@ export class UiApi {
   }
 
   private async makeDockerCall(apiPath: string): Promise<any> {
-    const response = await axios.get(this.dockerUrl + apiPath, {
-      httpsAgent: this.httpsAgent,
-      lookup: this.cacheable.lookup,
-    })
+    return axios
+      .get(this.dockerUrl + apiPath, {
+        httpsAgent: this.httpsAgent,
+        lookup: this.cacheable.lookup,
+        timeout: 60000,
+      })
+      .then((response) => {
+        return response.data
+      })
+      .catch((error) => {
+        // At this point, we should have exhausted the retries
 
-    return response.data
+        if (error.code === 'ETIMEOUT') {
+          console.error(`Timeout error connecting to ${this.dockerUrl}`)
+        }
+        else {
+          console.error(`${error.code} error connecting to ${this.dockerUrl}`)
+        }
+
+        return '{ "count": 0, "results": [] }'
+      })
   }
 
   private async makeCall(apiPath: string): Promise<unknown> {
