@@ -334,12 +334,16 @@ export class UiApi {
         return response.data
       })
       .catch((error) => {
-        if (error.code === 'ETIMEOUT') {
-          // Timeout Error (You can implement retry here where suitable)
-          console.error(`Timeout Error connecting to ${this.dockerUrl}`)
+        // At this point, we should have exhausted the retries
 
-          return '{ "count": 0, "results": [] }'
+        if (error.code === 'ETIMEOUT') {
+          console.error(`Timeout error connecting to ${this.dockerUrl}`)
         }
+        else {
+          console.error(`${error.code} error connecting to ${this.dockerUrl}`)
+        }
+
+        return '{ "count": 0, "results": [] }'
       })
   }
 
