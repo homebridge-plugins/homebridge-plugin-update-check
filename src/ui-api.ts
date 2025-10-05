@@ -40,6 +40,12 @@ interface UiConfig {
   }
 }
 
+class ApiPluginEndpoints {
+  static readonly getHomebridgeVersion = '/api/status/homebridge-version'
+  static readonly getPluginList = '/api/plugins'
+  static readonly getIgnoredPluginList = '/api/config-editor/ui/plugins/hide-updates-for'
+}
+
 export class UiApi {
   private log: Logging
   private readonly secrets?: SecretsFile
@@ -98,7 +104,7 @@ export class UiApi {
 
   public async getHomebridge(): Promise<InstalledPlugin> {
     if (this.isConfigured()) {
-      const result = await this.makeCall('/api/status/homebridge-version') as Array<InstalledPlugin>
+      const result = await this.makeCall(ApiPluginEndpoints.getHomebridgeVersion) as Array<InstalledPlugin>
 
       if (result.length > 0) {
         return result[0]
@@ -115,7 +121,7 @@ export class UiApi {
 
   public async getPlugins(): Promise<Array<InstalledPlugin>> {
     if (this.isConfigured()) {
-      return await this.makeCall('/api/plugins') as Array<InstalledPlugin>
+      return await this.makeCall(ApiPluginEndpoints.getPluginList) as Array<InstalledPlugin>
     } else {
       return []
     }
@@ -124,8 +130,7 @@ export class UiApi {
   public async getIgnoredPlugins(): Promise<Array<string>> {
     if (this.isConfigured()) {
       try {
-        this.log.debug('Calling /api/config-editor/ui/plugins/hide-updates-for API endpoint')
-        const result = await this.makeCall('/api/config-editor/ui/plugins/hide-updates-for')
+        const result = await this.makeCall(ApiPluginEndpoints.getIgnoredPluginList)
 
         // Validate the response format
         if (!Array.isArray(result)) {
@@ -420,6 +425,10 @@ export class UiApi {
         // At this point, we should have exhausted the retries
 
         this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
+        if (error.code === 'ERR_BAD_REQUEST' && error.status === 404 && apiPath === ApiPluginEndpoints.getIgnoredPluginList) {
+          this.log.debug(`Error: ${JSON.stringify(error, undefined, 2)}`)
+          this.log.warn(`This feature requires a newer version of Homebridge UI. Please update to the latest version.`)
+        }
 
         return []
       })
