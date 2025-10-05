@@ -426,7 +426,7 @@ export class UiApi {
 
         this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
         if (error.code === 'ERR_BAD_REQUEST' && error.status === 404 && apiPath === ApiPluginEndpoints.getIgnoredPluginList) {
-          this.log.debug(`Error: ${JSON.stringify(error)}`)
+          this.log.debug(`Error: ${JSON.stringify(error, undefined, 2)}`)
           this.log.warn(`This feature requires a newer version of Homebridge UI. Please update to the latest version.`)
         }
 
