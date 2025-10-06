@@ -180,6 +180,12 @@
         "type": "boolean",
         "description": "When enabled, respects the 'Hide update notifications for this plugin' setting from homebridge-config-ui-x. Plugins marked to hide updates will not trigger notifications.",
         "default": true
+      },
+      "": {
+        "title": "",
+        "description": "Note: This feature may require updating Homebridge UI to a newer varsion. It is recommended to update to the latest version.",
+        "type": "object",
+        "properties": {}
       }
     },
     "required": ["name", "sensorType"]
