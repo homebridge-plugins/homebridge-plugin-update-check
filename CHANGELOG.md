@@ -2,71 +2,32 @@
 
 All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
 
-## [2.3.5](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.3...v2.3.5) (2025-10-03)
+## [2.3.6](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.6) (2025-11-01)
 
+### What's Changed
+- Add explicit warning when an outdated Homebridge UI (homebridge-config-ui-x) is detected, explaining that a newer UI version is required for full functionality ([#200](https://github.com/homebridge-plugins/homebridge-plugin-update-check/pull/200))
+- Clarify the requirement notice to better guide users on updating the Homebridge UI
+- Housekeeping and updated dependencies.
 
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.5...v2.3.6
 
-## [2.3.3](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.2...v2.3.3) (2025-09-14)
+## [2.3.5](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.5) (2025-11-01)
 
+### What's Changed
+- Fix error where current Docker version is not found by @justjam2013 in https://github.com/homebridge-plugins/homebridge-plugin-update-check/pull/166
+- v2.3.5 by @donavanbecker in https://github.com/homebridge-plugins/homebridge-plugin-update-check/pull/189
 
-
-## [2.3.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.1...v2.3.2) (2025-09-13)
-
-
-
-## [2.3.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.0...v2.3.1) (2025-09-04)
-
-
-
-# [2.3.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.2.1...v2.3.0) (2025-08-18)
-
-
-
-## [2.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.1.0...v2.2.1) (2025-08-17)
-
-
-
-# [2.1.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.2...v2.1.0) (2025-08-09)
-
-
-
-## [2.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.1...v2.0.2) (2025-03-05)
-
-
-
-## [2.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.0...v2.0.1) (2025-01-26)
-
-
-
-## [1.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v1.0.1...v1.0.2) (2022-03-26)
-
-
-
-## [1.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v1.0.0...v1.0.1) (2022-01-15)
-
-
-
-# [1.0.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.2.1...v1.0.0) (2022-01-15)
-
-
-
-## [0.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.2.0...v0.2.1) (2021-02-20)
-
-
-
-# [0.2.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.1.1...v0.2.0) (2021-02-20)
-
-
-
-## 0.1.1 (2021-02-19)
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.4...v2.3.5
 
 ## [2.3.4](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.4) (2025-09-14)
-## What's Changed
-* Fix error where current Docker version is not found by @justjam2013 in https://github.com/homebridge-plugins/homebridge-plugin-update-check/pull/166
+
+### What's Changed
+- Fix error where current Docker version is not found by @justjam2013 in https://github.com/homebridge-plugins/homebridge-plugin-update-check/pull/166
 
 **Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.3...v2.3.4
 
 ## [2.3.3](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.3) (2025-09-14)
+
 ### What's Changed
 - v2.3.3 ([b7a4c9e](https://github.com/homebridge-plugins/homebridge-plugin-update-check/commit/b7a4c9ec2b079b6f3e51411311573080b281d97c))
 
