@@ -68,9 +68,8 @@ export class UiApi {
         this.log.debug(`${requestConfig.url} - retry count: ${retryCount}, error: ${error.message}`)
       },
     })
-    const MAX_NODE_TIMEOUT_MS = 2 ** 31 - 1;
-    const MAX_NODE_TIMEOUT_SEC = Math.floor(MAX_NODE_TIMEOUT_MS / 1000);
-    this.cacheable = new CacheableLookup({ maxTtl: MAX_NODE_TIMEOUT_SEC });
+    const MAX_TTL_SEC = 86400; // limit TTL to 24 hours
+    this.cacheable = new CacheableLookup({ maxTtl: MAX_TTL_SEC });
     
     const configPath = path.resolve(hbStoragePath, 'config.json')
     const hbConfig = JSON.parse(readFileSync(configPath, 'utf8')) as HomebridgeConfig
