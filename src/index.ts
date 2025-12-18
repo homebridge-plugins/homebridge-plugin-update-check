@@ -279,7 +279,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
             ignoredPlugins.includes(plugin.name),
           )
           if (ignoredWithUpdates.length > 0) {
-            this.log.info(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
+            this.log.debug(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
           }
         }
       }
