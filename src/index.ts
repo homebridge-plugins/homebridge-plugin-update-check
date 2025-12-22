@@ -300,7 +300,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       }
     }
 
-    this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+    if (updatesAvailable.length > 0) {
+      this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
+    }
 
     // Provide additional diagnostic information in debug mode
     if (this.respectDisabledPlugins && ignoredPlugins.length > 0) {
