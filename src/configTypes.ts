@@ -15,4 +15,6 @@ export interface PluginUpdatePlatformConfig {
   autoRestartAfterUpdates?: boolean
   failureSensorType?: string
   respectDisabledPlugins?: boolean
+  preferMatter?: boolean
+  enableMatter?: boolean
 }

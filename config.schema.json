@@ -181,6 +181,18 @@
         "description": "When enabled, respects the 'Hide update notifications for this plugin' setting from homebridge-config-ui-x. Plugins marked to hide updates will not trigger notifications.",
         "default": true
       },
+      "enableMatter": {
+        "title": "Enable Matter support",
+        "type": "boolean",
+        "description": "Enable Homebridge Matter support when running on Homebridge v2.0 or later with Matter enabled.",
+        "default": true
+      },
+      "preferMatter": {
+        "title": "Prefer Matter over HAP",
+        "type": "boolean",
+        "description": "When both Matter and HAP are available, prefer the Matter platform implementation.",
+        "default": true
+      },
       "": {
         "title": "",
         "description": "Note: This feature may require updating Homebridge UI to a newer varsion. It is recommended to update to the latest version.",

@@ -80,4 +80,20 @@ describe('pluginUpdatePlatformConfig', () => {
     }
     expect(config.autoRestartAfterUpdates).toBe(true)
   })
+
+  it('should allow preferMatter property to be set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      preferMatter: true,
+    }
+    expect(config.preferMatter).toBe(true)
+  })
+
+  it('should allow enableMatter property to be set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      enableMatter: false,
+    }
+    expect(config.enableMatter).toBe(false)
+  })
 })
