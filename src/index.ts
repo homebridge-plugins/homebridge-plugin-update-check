@@ -80,6 +80,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly autoRestartAfterUpdates: boolean
   private readonly respectDisabledPlugins: boolean
   private readonly useMatter: boolean
+  private readonly externalAccessory: boolean
 
   private service?: Service
   private matterUUID?: string
@@ -133,6 +134,11 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.log.debug('Matter is available and enabled - using Matter accessory')
     }
 
+    this.externalAccessory = this.config.externalAccessory ?? false
+    if (this.externalAccessory) {
+      this.log.debug('External accessory mode enabled - accessory will be published outside the bridge')
+    }
+
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
@@ -166,14 +172,21 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   private addHapAccessory(): void {
-    if (!this.service) {
+    if (this.externalAccessory) {
+      // External accessory: always create fresh and publish outside the bridge.
+      // Homebridge handles pairing persistence; configureAccessory is never called
+      // by Homebridge for external accessories on restart.
       const uuid = hap.uuid.generate(PLATFORM_NAME)
       const newAccessory = new Accessory('Plugin Update Check', uuid)
-
       newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
-
+      this.setupHapAccessoryServices(newAccessory)
+      this.api.publishExternalAccessories(PLUGIN_NAME, [newAccessory])
+    } else if (!this.service) {
+      // Bridged accessory: only register if not already restored from cache by configureAccessory
+      const uuid = hap.uuid.generate(PLATFORM_NAME)
+      const newAccessory = new Accessory('Plugin Update Check', uuid)
+      newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
       this.configureAccessory(newAccessory)
-
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
     }
   }
@@ -183,8 +196,9 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     const serialNumber = `${PLATFORM_NAME}-update-sensor`
     const expectedUUID = matterApi.uuid.generate(serialNumber)
 
-    // If already restored from cache by configureMatterAccessory, skip registration
-    if (this.matterUUID === expectedUUID) {
+    // If already restored from cache by configureMatterAccessory, skip registration.
+    // External accessories are not cached via configureMatterAccessory, so always register when externalAccessory is true.
+    if (!this.externalAccessory && this.matterUUID === expectedUUID) {
       this.log.debug('Using cached Matter accessory (UUID: %s)', this.matterUUID)
       return
     }
@@ -202,6 +216,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       firmwareRevision: '1.0.0',
       hardwareRevision: '1.0.0',
       clusters: matterSensorInfo.initialClusters,
+      ...(this.externalAccessory ? { external: true } : {}),
     }
 
     try {
@@ -445,6 +460,17 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       return
     }
 
+    // When using external accessory mode, any cached bridged accessory is stale - unregister it
+    if (this.externalAccessory) {
+      this.log.debug('Unregistering stale bridged HAP accessory (switching to external mode):', accessory.displayName)
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])
+      return
+    }
+
+    this.setupHapAccessoryServices(accessory)
+  }
+
+  private setupHapAccessoryServices(accessory: PlatformAccessory): void {
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log(`${accessory.displayName} identify requested!`)
     })
@@ -467,68 +493,6 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.checkService(accessory, hap.Service.CarbonMonoxideSensor)
     this.checkService(accessory, hap.Service.CarbonDioxideSensor)
     this.checkService(accessory, hap.Service.AirQualitySensor)
-
-    /* const motionService = accessory.getService(hap.Service.MotionSensor);
-    const contactService = accessory.getService(hap.Service.ContactSensor);
-    const occupancyService = accessory.getService(hap.Service.OccupancySensor);
-    const smokeService = accessory.getService(hap.Service.SmokeSensor);
-    const leakService = accessory.getService(hap.Service.LeakSensor);
-    const lightService = accessory.getService(hap.Service.LightSensor);
-    const humidityService = accessory.getService(hap.Service.HumiditySensor);
-    const monoxideService = accessory.getService(hap.Service.CarbonMonoxideSensor);
-    const dioxideService = accessory.getService(hap.Service.CarbonDioxideSensor);
-    const airService = accessory.getService(hap.Service.AirQualitySensor);
-
-    if (this.sensorInfo.serviceType == hap.Service.MotionSensor) {
-      this.service = motionService;
-    } else if (motionService) {
-      accessory.removeService(motionService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.ContactSensor) {
-      this.service = contactService;
-    } else if (contactService) {
-      accessory.removeService(contactService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.OccupancySensor) {
-      this.service = occupancyService;
-    } else if (occupancyService) {
-      accessory.removeService(occupancyService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.SmokeSensor) {
-      this.service = smokeService;
-    } else if (smokeService) {
-      accessory.removeService(smokeService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.LeakSensor) {
-      this.service = leakService;
-    } else if (leakService) {
-      accessory.removeService(leakService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.LightSensor) {
-      this.service = lightService;
-    } else if (lightService) {
-      accessory.removeService(lightService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.HumiditySensor) {
-      this.service = humidityService;
-    } else if (humidityService) {
-      accessory.removeService(humidityService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.CarbonMonoxideSensor) {
-      this.service = monoxideService;
-    } else if (monoxideService) {
-      accessory.removeService(monoxideService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.CarbonDioxideSensor) {
-      this.service = dioxideService;
-    } else if (dioxideService) {
-      accessory.removeService(dioxideService);
-    }
-    if (this.sensorInfo.serviceType == hap.Service.AirQualitySensor) {
-      this.service = airService;
-    } else if (airService) {
-      accessory.removeService(airService);
-    } */
 
     this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
   }

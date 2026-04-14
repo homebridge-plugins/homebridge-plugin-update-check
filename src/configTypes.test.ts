@@ -95,4 +95,19 @@ describe('pluginUpdatePlatformConfig', () => {
     }
     expect(config.disableMatter).toBeUndefined()
   })
+
+  it('should allow externalAccessory property to be set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      externalAccessory: true,
+    }
+    expect(config.externalAccessory).toBe(true)
+  })
+
+  it('should default externalAccessory to undefined when not set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+    }
+    expect(config.externalAccessory).toBeUndefined()
+  })
 })

@@ -16,4 +16,5 @@ export interface PluginUpdatePlatformConfig {
   failureSensorType?: string
   respectDisabledPlugins?: boolean
   disableMatter?: boolean
+  externalAccessory?: boolean
 }

@@ -187,9 +187,15 @@
         "description": "When enabled, forces the plugin to use the HAP (HomeKit Accessory Protocol) bridge instead of Matter, even if Matter is available. Useful if you prefer HAP or encounter issues with Matter.",
         "default": false
       },
+      "externalAccessory": {
+        "title": "Publish as External Accessory",
+        "type": "boolean",
+        "description": "When enabled, the accessory is published as a standalone external device that pairs directly with HomeKit, rather than being bridged through Homebridge. Applies to both HAP and Matter. Note: changing this setting requires removing and re-adding the accessory in the Home app.",
+        "default": false
+      },
       "": {
         "title": "",
-        "description": "Note: This feature may require updating Homebridge UI to a newer varsion. It is recommended to update to the latest version.",
+        "description": "Note: This feature may require updating Homebridge UI to a newer version. It is recommended to update to the latest version.",
         "type": "object",
         "properties": {}
       }
