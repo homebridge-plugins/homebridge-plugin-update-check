@@ -52,6 +52,14 @@ interface SensorInfo {
   untrippedValue: CharacteristicValue
 }
 
+interface MatterSensorInfo {
+  deviceType: any
+  clusterName: string
+  trippedClusterState: Record<string, unknown>
+  untrippedClusterState: Record<string, unknown>
+  initialClusters: Record<string, unknown>
+}
+
 class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly log: Logging
   private readonly api: API
@@ -71,8 +79,10 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly allowDirectNpmUpdates: boolean
   private readonly autoRestartAfterUpdates: boolean
   private readonly respectDisabledPlugins: boolean
+  private readonly useMatter: boolean
 
   private service?: Service
+  private matterUUID?: string
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
@@ -107,19 +117,29 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
     this.respectDisabledPlugins = this.config.respectDisabledPlugins ?? true
 
+    // Determine if Matter should be used: requires Homebridge v2 with Matter available
+    // and Matter enabled, unless the user has explicitly disabled it via config
+    const matterAvailable = !!(
+      (api as any)?.isMatterAvailable?.()
+      && (api as any)?.isMatterEnabled?.()
+    )
+    const disableMatter = this.config.disableMatter ?? false
+    this.useMatter = matterAvailable && !disableMatter
+
+    if (matterAvailable && disableMatter) {
+      this.log.debug('Matter is available but disabled by configuration (disableMatter: true)')
+    } else if (this.useMatter) {
+      this.log.debug('Matter is available and enabled - using Matter accessory')
+    }
+
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
   addUpdateAccessory(): void {
-    if (!this.service) {
-      const uuid = hap.uuid.generate(PLATFORM_NAME)
-      const newAccessory = new Accessory('Plugin Update Check', uuid)
-
-      newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
-
-      this.configureAccessory(newAccessory)
-
-      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
+    if (this.useMatter) {
+      this.addMatterAccessory()
+    } else {
+      this.addHapAccessory()
     }
 
     setTimeout(() => {
@@ -130,6 +150,47 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     const timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
     this.setupFirstDailyRunResetCron(timezone)
     this.setupUpdatesCron(timezone)
+  }
+
+  private addHapAccessory(): void {
+    if (!this.service) {
+      const uuid = hap.uuid.generate(PLATFORM_NAME)
+      const newAccessory = new Accessory('Plugin Update Check', uuid)
+
+      newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
+
+      this.configureAccessory(newAccessory)
+
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
+    }
+  }
+
+  private addMatterAccessory(): void {
+    const matterApi = (this.api as any).matter
+    const serialNumber = `${PLATFORM_NAME}-update-sensor`
+    this.matterUUID = matterApi.uuid.generate(serialNumber)
+
+    const matterSensorInfo = this.getMatterSensorInfo(this.config.sensorType)
+
+    const matterAccessory = {
+      UUID: this.matterUUID,
+      displayName: 'Plugin Update Check',
+      deviceType: matterSensorInfo.deviceType,
+      serialNumber,
+      manufacturer: 'Homebridge',
+      model: 'Plugin Update Check',
+      firmwareRevision: '1.0.0',
+      hardwareRevision: '1.0.0',
+      clusters: matterSensorInfo.initialClusters,
+    }
+
+    matterApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [matterAccessory])
+      .catch((error: any) => this.log.error(`Failed to register Matter accessory '${matterAccessory.displayName}' (${this.matterUUID}):`, error))
+  }
+
+  configureMatterAccessory(accessory: any): void {
+    this.log.debug('Loading cached Matter accessory:', accessory.displayName)
+    this.matterUUID = accessory.UUID
   }
 
   setupFirstDailyRunResetCron(timezone: string): void {
@@ -317,7 +378,14 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   doCheck(): void {
     this.checkUi()
       .then((updates) => {
-        this.service?.setCharacteristic(this.sensorInfo.characteristicType, updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue)
+        if (this.useMatter && this.matterUUID) {
+          const matterSensorInfo = this.getMatterSensorInfo(this.config.sensorType)
+          const state = updates ? matterSensorInfo.trippedClusterState : matterSensorInfo.untrippedClusterState
+          ;(this.api as any).matter.updateAccessoryState(this.matterUUID, matterSensorInfo.clusterName, state)
+            .catch((error: any) => this.log.error(`Failed to update Matter accessory state for ${this.matterUUID}:`, error))
+        } else {
+          this.service?.setCharacteristic(this.sensorInfo.characteristicType, updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue)
+        }
       })
       .catch((ex) => {
         this.log.error(ex)
@@ -505,6 +573,84 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
           characteristicType: hap.Characteristic.MotionDetected,
           untrippedValue: false,
           trippedValue: true,
+        }
+    }
+  }
+
+  getMatterSensorInfo(sensorType?: string): MatterSensorInfo {
+    const matterApi = (this.api as any).matter
+    switch (sensorType?.toLowerCase()) {
+      case 'contact':
+        return {
+          deviceType: matterApi.deviceTypes.ContactSensor,
+          clusterName: 'booleanState',
+          // Matter BooleanState: false = contact open/triggered, true = contact closed/normal
+          trippedClusterState: { stateValue: false },
+          untrippedClusterState: { stateValue: true },
+          initialClusters: { booleanState: { stateValue: true } },
+        }
+      case 'occupancy':
+      case 'motion':
+        return {
+          deviceType: matterApi.deviceTypes.OccupancySensor,
+          clusterName: 'occupancySensing',
+          // Matter OccupancySensing: 1 = occupied/triggered, 0 = unoccupied/normal
+          trippedClusterState: { occupancy: 1 },
+          untrippedClusterState: { occupancy: 0 },
+          initialClusters: { occupancySensing: { occupancy: 0 } },
+        }
+      case 'leak':
+        return {
+          deviceType: matterApi.deviceTypes.WaterLeakDetector,
+          clusterName: 'booleanState',
+          trippedClusterState: { stateValue: true },
+          untrippedClusterState: { stateValue: false },
+          initialClusters: { booleanState: { stateValue: false } },
+        }
+      case 'smoke':
+        return {
+          deviceType: matterApi.deviceTypes.SmokeCOAlarm,
+          clusterName: 'smokeCoAlarm',
+          // Matter SmokeCoAlarm: 1 = warning/critical, 0 = normal
+          trippedClusterState: { smokeState: 1 },
+          untrippedClusterState: { smokeState: 0 },
+          initialClusters: { smokeCoAlarm: { smokeState: 0, coState: 0, batteryAlert: 0 } },
+        }
+      case 'air':
+        return {
+          deviceType: matterApi.deviceTypes.AirQualitySensor,
+          clusterName: 'airQuality',
+          // Matter AirQuality: 1 = good, 5 = very poor
+          trippedClusterState: { airQuality: 5 },
+          untrippedClusterState: { airQuality: 1 },
+          initialClusters: { airQuality: { airQuality: 1 } },
+        }
+      case 'humidity':
+        return {
+          deviceType: matterApi.deviceTypes.HumiditySensor,
+          clusterName: 'relativeHumidityMeasurement',
+          // Matter RelativeHumidityMeasurement: value in 0.01% increments
+          trippedClusterState: { measuredValue: 9999 },
+          untrippedClusterState: { measuredValue: 0 },
+          initialClusters: { relativeHumidityMeasurement: { measuredValue: 0, minMeasuredValue: 0, maxMeasuredValue: 9999 } },
+        }
+      case 'light':
+        return {
+          deviceType: matterApi.deviceTypes.LightSensor,
+          clusterName: 'illuminanceMeasurement',
+          // Matter IlluminanceMeasurement: 10000*log10(lux)+1, high value = bright (updates)
+          trippedClusterState: { measuredValue: 65534 },
+          untrippedClusterState: { measuredValue: 1 },
+          initialClusters: { illuminanceMeasurement: { measuredValue: 1, minMeasuredValue: 1, maxMeasuredValue: 65534 } },
+        }
+      default:
+        // Default to ContactSensor for unsupported types (monoxide, dioxide, etc.)
+        return {
+          deviceType: matterApi.deviceTypes.ContactSensor,
+          clusterName: 'booleanState',
+          trippedClusterState: { stateValue: false },
+          untrippedClusterState: { stateValue: true },
+          initialClusters: { booleanState: { stateValue: true } },
         }
     }
   }

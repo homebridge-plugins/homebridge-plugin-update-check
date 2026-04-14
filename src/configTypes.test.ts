@@ -80,4 +80,19 @@ describe('pluginUpdatePlatformConfig', () => {
     }
     expect(config.autoRestartAfterUpdates).toBe(true)
   })
+
+  it('should allow disableMatter property to be set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+      disableMatter: true,
+    }
+    expect(config.disableMatter).toBe(true)
+  })
+
+  it('should default disableMatter to undefined when not set', () => {
+    const config: PluginUpdatePlatformConfig = {
+      platform: 'ExamplePlatform',
+    }
+    expect(config.disableMatter).toBeUndefined()
+  })
 })

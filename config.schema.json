@@ -181,6 +181,12 @@
         "description": "When enabled, respects the 'Hide update notifications for this plugin' setting from homebridge-config-ui-x. Plugins marked to hide updates will not trigger notifications.",
         "default": true
       },
+      "disableMatter": {
+        "title": "Disable Matter",
+        "type": "boolean",
+        "description": "When enabled, forces the plugin to use the HAP (HomeKit Accessory Protocol) bridge instead of Matter, even if Matter is available. Useful if you prefer HAP or encounter issues with Matter.",
+        "default": false
+      },
       "": {
         "title": "",
         "description": "Note: This feature may require updating Homebridge UI to a newer varsion. It is recommended to update to the latest version.",
