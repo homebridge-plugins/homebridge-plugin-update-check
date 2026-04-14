@@ -72,7 +72,8 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private service?: Service
 
-  private cronJob!: Cron
+  private firstDailyRunResetCronJob!: Cron
+  private updatesCronJob!: Cron
   private firstDailyRun: boolean = true
 
   private hbUpdates: string[] = []
@@ -133,7 +134,7 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
   setupFirstDailyRunResetCron(timezone: string): void {
     const cronScheduleAtMidnight = '0 0 * * *'
 
-    this.cronJob = new Cron(
+    this.firstDailyRunResetCronJob = new Cron(
       cronScheduleAtMidnight,
       {
         name: `First Daily Run Reset Cron Job`,
@@ -149,7 +150,7 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
   setupUpdatesCron(timezone: string): void {
     const cronScheduleFiveAfterTheHour = '5 * * * *'
 
-    this.cronJob = new Cron(
+    this.updatesCronJob = new Cron(
       cronScheduleFiveAfterTheHour,
       {
         name: `Updates Available Cron Job`,
