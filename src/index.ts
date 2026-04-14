@@ -83,6 +83,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
 
   private service?: Service
   private matterUUID?: string
+  private cachedMatterAccessory?: any
 
   private cronJob!: Cron
   private firstDailyRun: boolean = true
@@ -135,10 +136,22 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
-  addUpdateAccessory(): void {
+  async addUpdateAccessory(): Promise<void> {
     if (this.useMatter) {
-      this.addMatterAccessory()
+      // Clean up stale Matter accessory if the sensor type changed and a new one needs to be registered
+      await this.addMatterAccessory()
     } else {
+      // If switching from Matter to HAP mode, unregister any cached Matter accessory
+      if (this.cachedMatterAccessory) {
+        this.log.debug('Unregistering stale Matter accessory (switching to HAP mode):', this.cachedMatterAccessory.displayName)
+        try {
+          await (this.api as any).matter.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [this.cachedMatterAccessory])
+        } catch (error) {
+          this.log.warn('Failed to unregister stale Matter accessory:', error)
+        }
+        this.cachedMatterAccessory = undefined
+        this.matterUUID = undefined
+      }
       this.addHapAccessory()
     }
 
@@ -165,11 +178,18 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
     }
   }
 
-  private addMatterAccessory(): void {
+  private async addMatterAccessory(): Promise<void> {
     const matterApi = (this.api as any).matter
     const serialNumber = `${PLATFORM_NAME}-update-sensor`
-    this.matterUUID = matterApi.uuid.generate(serialNumber)
+    const expectedUUID = matterApi.uuid.generate(serialNumber)
 
+    // If already restored from cache by configureMatterAccessory, skip registration
+    if (this.matterUUID === expectedUUID) {
+      this.log.debug('Using cached Matter accessory (UUID: %s)', this.matterUUID)
+      return
+    }
+
+    this.matterUUID = expectedUUID
     const matterSensorInfo = this.getMatterSensorInfo(this.config.sensorType)
 
     const matterAccessory = {
@@ -184,12 +204,17 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       clusters: matterSensorInfo.initialClusters,
     }
 
-    matterApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [matterAccessory])
-      .catch((error: any) => this.log.error(`Failed to register Matter accessory '${matterAccessory.displayName}' (${this.matterUUID}):`, error))
+    try {
+      await matterApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [matterAccessory])
+      this.log.debug('Matter accessory registered (UUID: %s)', this.matterUUID)
+    } catch (error) {
+      this.log.error(`Failed to register Matter accessory '${matterAccessory.displayName}' (${this.matterUUID}):`, error)
+    }
   }
 
   configureMatterAccessory(accessory: any): void {
     this.log.debug('Loading cached Matter accessory:', accessory.displayName)
+    this.cachedMatterAccessory = accessory
     this.matterUUID = accessory.UUID
   }
 
@@ -413,6 +438,13 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
   }
 
   configureAccessory(accessory: PlatformAccessory): void {
+    // When using Matter, any cached HAP accessory is stale - unregister it
+    if (this.useMatter) {
+      this.log.debug('Unregistering stale HAP accessory (switching to Matter mode):', accessory.displayName)
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])
+      return
+    }
+
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
       this.log(`${accessory.displayName} identify requested!`)
     })
