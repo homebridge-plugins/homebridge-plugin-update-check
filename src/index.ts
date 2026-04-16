@@ -140,6 +140,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       {
         name: `First Daily Run Reset Cron Job`,
         timezone: timezone,
+        unref: true,
       },
       async () => {
         this.firstDailyRun = true
@@ -156,6 +157,7 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       {
         name: `Updates Available Cron Job`,
         timezone: timezone,
+        unref: true,
       },
       async () => {
         this.log.debug(`Is first daily run: ${this.firstDailyRun}`)
