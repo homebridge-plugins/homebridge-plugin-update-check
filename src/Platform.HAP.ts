@@ -1,8 +1,3 @@
-/* eslint-disable style/operator-linebreak */
-/* eslint-disable object-shorthand */
-/* eslint-disable perfectionist/sort-imports */
-/* eslint-disable antfu/if-newline */
-
 import type {
   API,
   Characteristic,
@@ -16,12 +11,6 @@ import type {
   WithUUID,
 } from 'homebridge'
 
-import {
-  APIEvent,
-  LogLevel,
-  PlatformAccessoryEvent,
-} from 'homebridge'
-
 import type { PluginUpdatePlatformConfig } from './configTypes.js'
 
 import fs from 'node:fs'
@@ -30,18 +19,22 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { Cron } from 'croner'
+import {
+  APIEvent,
+  LogLevel,
+  PlatformAccessoryEvent,
+} from 'homebridge'
 
-// eslint-disable-next-line ts/consistent-type-imports
-import { InstalledPlugin, UiApi } from './ui-api.js'
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
 
-// ESM equivalent of __dirname
+import { UpdateCheckCore } from './updateCheckCore.js'
+
 const __filename = fileURLToPath(import.meta.url)
-// eslint-disable-next-line unused-imports/no-unused-vars
 const __dirname = path.dirname(__filename)
 
 let hap: HAP
 let Accessory: typeof PlatformAccessory
+
 
 interface SensorInfo {
   serviceType: WithUUID<typeof Service>
@@ -54,32 +47,11 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly log: Logging
   private readonly api: API
   private readonly config: PluginUpdatePlatformConfig
-  private readonly uiApi: UiApi
-
-  private readonly isDocker: boolean
   private readonly sensorInfo: SensorInfo
-  private readonly checkHB: boolean
-  private readonly checkHBUI: boolean
-  private readonly checkPlugins: boolean
-  private readonly checkDocker: boolean
-  private readonly initialCheckDelay: number
-  private readonly autoUpdateHB: boolean
-  private readonly autoUpdateHBUI: boolean
-  private readonly autoUpdatePlugins: boolean
-  private readonly allowDirectNpmUpdates: boolean
-  private readonly autoRestartAfterUpdates: boolean
-  private readonly respectDisabledPlugins: boolean
-
+  private readonly updateCore: UpdateCheckCore
   private service?: Service
-
   private firstDailyRunResetCronJob!: Cron
   private updatesCronJob!: Cron
-  private firstDailyRun: boolean = true
-
-  private hbUpdates: string[] = []
-  private hbUIUpdates: string[] = []
-  private pluginUpdates: string[] = []
-  private dockerUpdates: string[] = []
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     hap = api.hap
@@ -88,31 +60,17 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
     this.log = log
     this.config = config as PluginUpdatePlatformConfig
     this.api = api
-
-    this.uiApi = new UiApi(this.api.user.storagePath(), this.log)
-    this.isDocker = fs.existsSync('/homebridge/package.json')
     this.sensorInfo = this.getSensorInfo(this.config.sensorType)
-
-    this.checkHB = this.config.checkHomebridgeUpdates ?? false
-    this.checkHBUI = this.config.checkHomebridgeUIUpdates ?? false
-    this.checkPlugins = this.config.checkPluginUpdates ?? false
-    this.checkDocker = this.config.checkDockerUpdates ?? false
-    this.initialCheckDelay = this.config.initialCheckDelay ?? 10
-
-    this.autoUpdateHB = this.config.autoUpdateHomebridge ?? false
-    this.autoUpdateHBUI = this.config.autoUpdateHomebridgeUI ?? false
-    this.autoUpdatePlugins = this.config.autoUpdatePlugins ?? false
-    this.allowDirectNpmUpdates = this.config.allowDirectNpmUpdates ?? false
-    this.autoRestartAfterUpdates = this.config.autoRestartAfterUpdates ?? false
-    this.respectDisabledPlugins = this.config.respectDisabledPlugins ?? true
-
+    const isDocker = fs.existsSync('/homebridge/package.json')
+    this.updateCore = new UpdateCheckCore(log, config, this.api.user.storagePath(), isDocker)
     api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
   addUpdateAccessory(): void {
     if (!this.service) {
+      const accessoryName = this.config.name || 'Plugin Update Check';
       const uuid = hap.uuid.generate(PLATFORM_NAME)
-      const newAccessory = new Accessory('Plugin Update Check', uuid)
+      const newAccessory = new Accessory(accessoryName, uuid)
 
       newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
 
@@ -121,196 +79,27 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
     }
 
+    // Initial check after delay
     setTimeout(() => {
       this.doCheck()
-      this.firstDailyRun = false
-    }, this.initialCheckDelay * 1000)
+      this.updateCore.firstDailyRun = false
+    }, this.updateCore.initialCheckDelay * 1000)
 
-    const timezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone
-    this.setupFirstDailyRunResetCron(timezone)
-    this.setupUpdatesCron(timezone)
+    // Use shared cron scheduling for periodic checks and daily reset
+    this.updateCore.startScheduledChecks(() => {
+      // Check if Node.js update is the reason for tripped state
+      const nodeUpdate = this.updateCore.nodeUpdates.length > 0;
+      if (nodeUpdate) {
+        this.log.info('Sensor tripped: Node.js update available');
+      }
+      const updates = this.updateCore.hbUpdates.length + this.updateCore.hbUIUpdates.length + this.updateCore.pluginUpdates.length + this.updateCore.dockerUpdates.length + this.updateCore.nodeUpdates.length;
+      this.service?.setCharacteristic(this.sensorInfo.characteristicType, updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue);
+    });
   }
 
-  setupFirstDailyRunResetCron(timezone: string): void {
-    const cronScheduleAtMidnight = '0 0 * * *'
-
-    this.firstDailyRunResetCronJob = new Cron(
-      cronScheduleAtMidnight,
-      {
-        name: `First Daily Run Reset Cron Job`,
-        timezone: timezone,
-      },
-      async () => {
-        this.firstDailyRun = true
-        this.log.debug(`Reset "firstDailyRun" to ${this.firstDailyRun}`)
-      },
-    )
-  }
-
-  setupUpdatesCron(timezone: string): void {
-    const cronScheduleFiveAfterTheHour = '5 * * * *'
-
-    this.updatesCronJob = new Cron(
-      cronScheduleFiveAfterTheHour,
-      {
-        name: `Updates Available Cron Job`,
-        timezone: timezone,
-      },
-      async () => {
-        this.log.debug(`Is first daily run: ${this.firstDailyRun}`)
-        this.doCheck()
-        this.firstDailyRun = false
-        this.log.debug(`Cleared "firstDailyRun" to ${this.firstDailyRun}`)
-      },
-    )
-  }
 
   async checkUi(): Promise<number> {
-    this.log.debug('Searching for available updates ...')
-
-    let logLevel = (this.firstDailyRun === true) ? LogLevel.INFO : LogLevel.DEBUG
-    const updatesAvailable: InstalledPlugin[] = []
-
-    // Get ignored plugins from API if respectDisabledPlugins is enabled
-    let ignoredPlugins: string[] = []
-    if (this.respectDisabledPlugins) {
-      try {
-        ignoredPlugins = await this.uiApi.getIgnoredPlugins()
-        this.log.debug(`Retrieved ${ignoredPlugins.length} ignored plugin(s) from homebridge-config-ui-x: ${ignoredPlugins.join(', ')}`)
-      } catch (error) {
-        this.log.warn(`Failed to retrieve ignored plugins list, filtering disabled: ${error}`)
-        ignoredPlugins = []
-      }
-    } else {
-      this.log.debug('respectDisabledPlugins is disabled, skipping plugin filtering')
-    }
-
-    if (this.checkHB) {
-      const homebridge = await this.uiApi.getHomebridge()
-
-      if (homebridge.updateAvailable) {
-        // Check if homebridge core updates are ignored
-        const isIgnored = this.respectDisabledPlugins && ignoredPlugins.includes('homebridge')
-
-        if (!isIgnored) {
-          updatesAvailable.push(homebridge)
-
-          const version: string = homebridge.latestVersion
-
-          if (this.hbUpdates.length === 0 || !this.hbUpdates.includes(version)) logLevel = LogLevel.INFO
-          this.log.log(logLevel, `Homebridge update available: ${version}`)
-
-          this.hbUpdates = [version]
-        } else {
-          this.log.debug(`Ignoring Homebridge core update: ${homebridge.latestVersion} (update notifications disabled in homebridge-config-ui-x)`)
-        }
-      }
-    }
-
-    if (this.checkHBUI || this.checkPlugins) {
-      const plugins = await this.uiApi.getPlugins()
-
-      if (this.checkHBUI) {
-        const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
-
-        // Only one plugin is returned
-        homebridgeUiPlugins.forEach((homebridgeUI) => {
-          if (homebridgeUI.updateAvailable) {
-            // Check if homebridge-config-ui-x updates are ignored
-            const isIgnored = this.respectDisabledPlugins && ignoredPlugins.includes('homebridge-config-ui-x')
-
-            if (!isIgnored) {
-              updatesAvailable.push(homebridgeUI)
-
-              const version: string = homebridgeUI.latestVersion
-
-              if (this.hbUIUpdates.length === 0 || !this.hbUIUpdates.includes(version)) logLevel = LogLevel.INFO
-              this.log.log(logLevel, `Homebridge UI update available: ${version}`)
-
-              this.hbUIUpdates = [version]
-            } else {
-              this.log.debug(`Ignoring Homebridge UI update: ${homebridgeUI.latestVersion} (update notifications disabled in homebridge-config-ui-x)`)
-            }
-          }
-        })
-      }
-
-      if (this.checkPlugins) {
-        this.log.debug(`Checking ${plugins.length} plugins for updates (respectDisabledPlugins: ${this.respectDisabledPlugins})`)
-
-        const filteredPlugins = plugins.filter((plugin) => {
-          // Always exclude homebridge-config-ui-x
-          if (plugin.name === 'homebridge-config-ui-x') {
-            return false
-          }
-
-          // If respectDisabledPlugins is enabled, check API ignored list
-          if (this.respectDisabledPlugins) {
-            if (ignoredPlugins.includes(plugin.name)) {
-              this.log.debug(`Filtering out plugin ${plugin.name} (ignored in homebridge-config-ui-x)`)
-              return false
-            }
-          }
-
-          return true
-        })
-
-        this.log.debug(`After filtering: ${filteredPlugins.length} plugins to check for updates`)
-
-        filteredPlugins.forEach((plugin) => {
-          if (plugin.updateAvailable) {
-            updatesAvailable.push(plugin)
-
-            const version: string = plugin.latestVersion
-
-            if (this.pluginUpdates.length === 0 || !this.pluginUpdates.includes(version)) logLevel = LogLevel.INFO
-            this.log.log(logLevel, `Homebridge plugin update available: ${plugin.name} ${plugin.latestVersion}`)
-
-            this.pluginUpdates.push(version)
-          }
-        })
-
-        // Log ignored plugins if any updates are available for them (only when respectDisabledPlugins is enabled)
-        if (this.respectDisabledPlugins) {
-          const ignoredWithUpdates = plugins.filter(plugin =>
-            plugin.name !== 'homebridge-config-ui-x' &&
-            plugin.updateAvailable &&
-            ignoredPlugins.includes(plugin.name),
-          )
-          if (ignoredWithUpdates.length > 0) {
-            this.log.info(`Ignoring updates for ${ignoredWithUpdates.length} plugin(s): ${ignoredWithUpdates.map(p => p.name).join(', ')}`)
-          }
-        }
-      }
-    }
-
-    if (this.isDocker && this.checkDocker) {
-      const docker = await this.uiApi.getDocker()
-
-      if (docker.updateAvailable) {
-        updatesAvailable.push(docker)
-
-        const version: string = docker.latestVersion
-
-        if (this.dockerUpdates.length === 0 || !this.dockerUpdates.includes(version)) logLevel = LogLevel.INFO
-        this.log.log(logLevel, `Docker update available: ${version}`)
-
-        this.dockerUpdates = [version]
-      }
-    }
-
-    this.log.log(logLevel, `Found ${updatesAvailable.length} available update(s)`)
-
-    // Provide additional diagnostic information in debug mode
-    if (this.respectDisabledPlugins && ignoredPlugins.length > 0) {
-      this.log.debug(`Filtering enabled with ${ignoredPlugins.length} ignored plugins: ${ignoredPlugins.join(', ')}`)
-    } else if (this.respectDisabledPlugins) {
-      this.log.debug('Filtering enabled but no ignored plugins found')
-    } else {
-      this.log.debug('Plugin filtering is disabled (respectDisabledPlugins: false)')
-    }
-
-    return updatesAvailable.length
+    return this.updateCore.checkUi();
   }
 
   doCheck(): void {

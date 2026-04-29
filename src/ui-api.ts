@@ -14,8 +14,8 @@ import https from 'node:https'
 import path from 'node:path'
 import process from 'node:process'
 
-import axios from 'axios'
-import axiosRetry from 'axios-retry'
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
 import CacheableLookup from 'cacheable-lookup'
 import jwt from 'jsonwebtoken'
 
@@ -60,14 +60,6 @@ export class UiApi {
     this.log = log
     this.hbStoragePath = hbStoragePath
 
-    axiosRetry(axios, {
-      retries: 3,
-      retryDelay: (...arg) => axiosRetry.exponentialDelay(...arg, 1000),
-
-      onRetry: (retryCount, error, requestConfig) => {
-        this.log.debug(`${requestConfig.url} - retry count: ${retryCount}, error: ${error.message}`)
-      },
-    })
     const MAX_TTL_SEC = 86400; // limit TTL to 24 hours
     this.cacheable = new CacheableLookup({ maxTtl: MAX_TTL_SEC });
     
@@ -342,97 +334,128 @@ export class UiApi {
   }
 
   private async makeRestartCall(apiPath: string): Promise<unknown> {
-    return axios
-      .put(this.baseUrl + apiPath, {}, {
-        headers: {
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        httpsAgent: this.httpsAgent,
-      })
-      .then((response) => {
-        return response.data
-      })
-      .catch((error) => {
-        // At this point, we should have exhausted the retries
-
-        this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
-
-        return null
-      })
+    return this.nativeRequestWithRetry('PUT', this.baseUrl + apiPath, {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+      agent: this.httpsAgent,
+      lookup: this.cacheable.lookup,
+    })
   }
 
   private async makeBackupCall(apiPath: string): Promise<unknown> {
-    return axios
-      .post(this.baseUrl + apiPath, {}, {
-        headers: {
-          Authorization: `Bearer ${this.getToken()}`,
-        },
-        httpsAgent: this.httpsAgent,
-        timeout: 60000, // 60 second timeout for backup operations
-      })
-      .then((response) => {
-        return response.data
-      })
-      .catch((error) => {
-        // At this point, we should have exhausted the retries
-
-        this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
-
-        return null
-      })
+    return this.nativeRequestWithRetry('POST', this.baseUrl + apiPath, {
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+      agent: this.httpsAgent,
+      lookup: this.cacheable.lookup,
+      timeout: 60000,
+    })
   }
 
   private async makeDockerCall(apiPath: string): Promise<any> {
-    return axios
-      .get(this.dockerUrl + apiPath, {
-        httpsAgent: this.httpsAgent,
+    try {
+      return await this.nativeRequestWithRetry('GET', this.dockerUrl + apiPath, {
+        agent: this.httpsAgent,
         lookup: this.cacheable.lookup,
         timeout: 60000,
       })
-      .then((response) => {
-        return response.data
-      })
-      .catch((error) => {
-        // At this point, we should have exhausted the retries
-
-        if (error.code === 'ETIMEOUT') {
-          this.log.error(`Timeout error connecting to ${this.dockerUrl}`)
-        }
-        else {
-          this.log.error(`${error.code} error connecting to ${this.dockerUrl}`)
-        }
-
-        return '{ "count": 0, "results": [] }'
-      })
+    } catch (error: any) {
+      if (error.code === 'ETIMEOUT') {
+        this.log.error(`Timeout error connecting to ${this.dockerUrl}`)
+      } else {
+        this.log.error(`${error.code} error connecting to ${this.dockerUrl}`)
+      }
+      return { count: 0, results: [] }
+    }
   }
 
   private async makeCall(apiPath: string): Promise<any[]> {
-    return axios
-      .get(this.baseUrl + apiPath, {
+    try {
+      const data = await this.nativeRequestWithRetry('GET', this.baseUrl + apiPath, {
         headers: {
           Authorization: `Bearer ${this.getToken()}`,
         },
-        httpsAgent: this.httpsAgent,
+        agent: this.httpsAgent,
         lookup: this.cacheable.lookup,
       })
-      .then((response) => {
-        this.log.debug(`${this.baseUrl + apiPath}: ${JSON.stringify(response.data)}`)
-        if (!Array.isArray(response.data)) {
-          return [response.data]
-        }
-        return response.data
-      })
-      .catch((error) => {
-        // At this point, we should have exhausted the retries
+      this.log.debug(`${this.baseUrl + apiPath}: ${JSON.stringify(data)}`)
+      if (!Array.isArray(data)) {
+        return [data]
+      }
+      return data
+    } catch (error: any) {
+      this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
+      if (error.code === 'ERR_BAD_REQUEST' && error.status === 404 && apiPath === ApiPluginEndpoints.getIgnoredPluginList) {
+        this.log.debug(`Error: ${JSON.stringify(error, undefined, 2)}`)
+        this.log.warn(`This feature requires a newer version of Homebridge UI. Please update to the latest version.`)
+      }
+      return []
+    }
+  }
 
-        this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
-        if (error.code === 'ERR_BAD_REQUEST' && error.status === 404 && apiPath === ApiPluginEndpoints.getIgnoredPluginList) {
-          this.log.debug(`Error: ${JSON.stringify(error, undefined, 2)}`)
-          this.log.warn(`This feature requires a newer version of Homebridge UI. Please update to the latest version.`)
+  private async nativeRequestWithRetry(method: string, urlString: string, options: any = {}, retries = 3, backoff = 1000): Promise<any> {
+    let attempt = 0
+    let lastError
+    while (attempt < retries) {
+      try {
+        return await this.nativeRequest(method, urlString, options)
+      } catch (err) {
+        lastError = err
+        attempt++
+        if (attempt < retries) {
+          await new Promise(res => setTimeout(res, backoff * attempt))
         }
+      }
+    }
+    throw lastError
+  }
 
-        return []
-      })
+  private nativeRequest(method: string, urlString: string, options: any = {}): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try {
+        const urlObj = new URL(urlString)
+        const isHttps = urlObj.protocol === 'https:'
+        const reqOptions: any = {
+          method,
+          hostname: urlObj.hostname,
+          port: urlObj.port || (isHttps ? 443 : 80),
+          path: urlObj.pathname + urlObj.search,
+          headers: options.headers || {},
+          agent: options.agent,
+          timeout: options.timeout || 30000,
+          lookup: options.lookup,
+        }
+        const req = (isHttps ? httpsRequest : httpRequest)(reqOptions, (res) => {
+          let data = ''
+          res.on('data', (chunk) => { data += chunk })
+          res.on('end', () => {
+            try {
+              const contentType = res.headers['content-type'] || ''
+              if (contentType.includes('application/json')) {
+                resolve(JSON.parse(data))
+              } else {
+                resolve(data)
+              }
+            } catch (err) {
+              reject(err)
+            }
+          })
+        })
+        req.on('error', (err) => reject(err))
+        req.on('timeout', () => {
+          req.destroy()
+          reject(new Error('ETIMEOUT'))
+        })
+        if (method === 'POST' || method === 'PUT') {
+          req.write(options.body ? JSON.stringify(options.body) : '{}')
+        }
+        req.end()
+      } catch (err) {
+        reject(err)
+      }
+    })
   }
 
   public getToken(): string {

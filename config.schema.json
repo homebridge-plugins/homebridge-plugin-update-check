@@ -9,6 +9,18 @@
   "schema": {
     "type": "object",
     "properties": {
+                  "autoUpdateNode": {
+                    "title": "Auto-update Node.js",
+                    "type": "boolean",
+                    "description": "Automatically update Node.js using hb-service update-node when a new LTS version is available and supported.",
+                    "default": false
+                  },
+            "checkNodeUpdates": {
+              "title": "Check for Node.js updates",
+              "type": "boolean",
+              "description": "Check if a newer LTS version of Node.js is available.",
+              "default": false
+            },
       "name": {
         "title": "Name",
         "type": "string",

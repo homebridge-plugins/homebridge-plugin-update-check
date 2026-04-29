@@ -1,134 +1,38 @@
-# Changelog
-
-All notable changes to this project will be documented in this file. This project uses [Semantic Versioning](https://semver.org/)
-
-## [2.3.7](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.6...v2.3.7) (2025-11-21)
-
-
-
-## [2.3.6](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.5...v2.3.6) (2025-11-01)
-
-
-
-## [2.3.5](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.3...v2.3.5) (2025-10-03)
-
-
-
-## [2.3.3](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.2...v2.3.3) (2025-09-14)
-
-
-
-## [2.3.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.1...v2.3.2) (2025-09-13)
-
-
-
-## [2.3.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.0...v2.3.1) (2025-09-04)
-
-
-
-# [2.3.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.2.1...v2.3.0) (2025-08-18)
-
-
-
-## [2.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.1.0...v2.2.1) (2025-08-17)
-
-
-
-# [2.1.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.2...v2.1.0) (2025-08-09)
-
-
-
-## [2.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.1...v2.0.2) (2025-03-05)
-
-
-
-## [2.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.0...v2.0.1) (2025-01-26)
-
-
-
-## [1.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v1.0.1...v1.0.2) (2022-03-26)
-
-
-
-## [1.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v1.0.0...v1.0.1) (2022-01-15)
-
-
-
-# [1.0.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.2.1...v1.0.0) (2022-01-15)
-
-
-
-## [0.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.2.0...v0.2.1) (2021-02-20)
-
-
-
-# [0.2.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.1.1...v0.2.0) (2021-02-20)
-
-
-
-## 0.1.1 (2021-02-19)
-
-## [2.3.6](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.5...v2.3.6) (2025-11-01)
-
-
-
-## [2.3.5](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.3...v2.3.5) (2025-10-03)
-
-
-
-## [2.3.3](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.2...v2.3.3) (2025-09-14)
-
-
-
-## [2.3.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.1...v2.3.2) (2025-09-13)
-
-
-
-## [2.3.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.0...v2.3.1) (2025-09-04)
-
-
-
-# [2.3.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.2.1...v2.3.0) (2025-08-18)
-
-
-
-## [2.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.1.0...v2.2.1) (2025-08-17)
-
-
-
-# [2.1.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.2...v2.1.0) (2025-08-09)
-
-
-
-## [2.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.1...v2.0.2) (2025-03-05)
-
-
-
-## [2.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.0.0...v2.0.1) (2025-01-26)
-
-
-
-## [1.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v1.0.1...v1.0.2) (2022-03-26)
-
-
-
-## [1.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v1.0.0...v1.0.1) (2022-01-15)
-
-
-
-# [1.0.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.2.1...v1.0.0) (2022-01-15)
-
-
-
-## [0.2.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.2.0...v0.2.1) (2021-02-20)
-
-
-
-# [0.2.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v0.1.1...v0.2.0) (2021-02-20)
-
-
-
-## 0.1.1 (2021-02-19)
+## [3.0.0](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v3.0.0) (2026-04-29)
+
+### Enhancements
+- Node.js update check and auto-update:
+  - The plugin can now check for new Node.js LTS versions and notify if an update is available. Controlled by the new `checkNodeUpdates` config option. Implements [#206](https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues/206).
+  - New config option: `autoUpdateNode` — If enabled, the plugin will attempt to automatically update Node.js using `hb-service update-node` when a new LTS version is detected and the system supports it.
+  - The plugin checks for `hb-service update-node` support before attempting the update, and logs the result (success or failure).
+  - If a Node.js update is available, a log line is emitted when the HomeKit/Matter sensor is tripped due to Node.js.
+  - The HomeKit/Matter sensor is now tripped if any update is available, including Node.js, Homebridge, UI, plugins, or Docker.
+- Suppress or log at debug level when no updates are found, instead of always logging "Found 0 available update(s)". Fixes [#224](https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues/224).
+- Log level for update notifications is now correct per update type (Homebridge, UI, plugins, Docker). Each update logs as info only if a new update is found for that type, otherwise as debug. Fixes [#225](https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues/225).
+- Full Homebridge v2.0 Matter support with HAP fallback. Matter is now the default platform when available and enabled, with seamless fallback to HAP if not.
+- Refactored to use a runtime proxy/factory pattern for platform selection (HAP vs Matter).
+- Added `preferMatter`, `enableMatter`, `disableMatter`, and `externalAccessory` options to configuration and schema.
+- Improved accessory registration and cleanup logic for both HAP and Matter, including external accessory support.
+- Switched all HTTP(S) requests to native Node.js http/https modules with manual retry and DNS caching (cacheable-lookup). Removed axios and axios-retry dependencies.
+- Updated documentation and schema for new features and options.
+
+### Bug Fixes
+- Croner cron jobs are now unref'd so they do not prevent Node.js from exiting cleanly. Fixes [#222](https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues/222).
+- Accessory/device name now uses the configured `name` property as the HomeKit/Matter accessory name, not just the platform name. Fixes [#223](https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues/223).
+
+### Other
+- Added and updated tests for new config options and proxy logic. All tests pass.
+- Updated all dependencies and removed unused packages for improved security and compatibility.
+- General code cleanup, improved file/class naming, and import clarity.
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.7...v3.0.0
+
+## [2.3.7](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.7) (2025-12-01)
+
+### What's Changed
+- Clamp max DNS cache TTL to prevent excessive warnings ([#208](https://github.com/homebridge-plugins/homebridge-plugin-update-check/pull/208))
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v2.3.6...v2.3.7
 
 ## [2.3.6](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v2.3.6) (2025-11-01)
 

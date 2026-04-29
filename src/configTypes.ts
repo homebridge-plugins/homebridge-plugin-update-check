@@ -1,6 +1,9 @@
 import type { PlatformIdentifier, PlatformName } from 'homebridge'
 
 export interface PluginUpdatePlatformConfig {
+      autoUpdateNode?: boolean
+    checkNodeUpdates?: boolean
+  name: string
   platform: PlatformName | PlatformIdentifier
   sensorType?: string
   checkHomebridgeUpdates?: boolean

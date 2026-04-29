@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 // Test for the plugin filtering logic
-describe('Plugin Update Filtering', () => {
+describe('plugin Update Filtering', () => {
   it('should filter plugins correctly based on ignore list', () => {
     // Mock plugin data similar to what would come from the API
     const mockPlugins = [
@@ -12,7 +12,7 @@ describe('Plugin Update Filtering', () => {
         updateAvailable: true,
       },
       {
-        name: 'homebridge-plugin-2', 
+        name: 'homebridge-plugin-2',
         installedVersion: '2.0.0',
         latestVersion: '2.1.0',
         updateAvailable: true,
@@ -34,9 +34,9 @@ describe('Plugin Update Filtering', () => {
     const ignoredPlugins = ['homebridge-plugin-2', 'homebridge-plugin-3']
 
     // Test the filtering logic that would be used in checkUi()
-    const filteredPlugins = mockPlugins.filter(plugin => 
-      plugin.name !== 'homebridge-config-ui-x' && 
-      !ignoredPlugins.includes(plugin.name)
+    const filteredPlugins = mockPlugins.filter(plugin =>
+      plugin.name !== 'homebridge-config-ui-x'
+      && !ignoredPlugins.includes(plugin.name),
     )
 
     expect(filteredPlugins).toHaveLength(1)
@@ -61,9 +61,9 @@ describe('Plugin Update Filtering', () => {
 
     const ignoredPlugins: string[] = []
 
-    const filteredPlugins = mockPlugins.filter(plugin => 
-      plugin.name !== 'homebridge-config-ui-x' && 
-      !ignoredPlugins.includes(plugin.name)
+    const filteredPlugins = mockPlugins.filter(plugin =>
+      plugin.name !== 'homebridge-config-ui-x'
+      && !ignoredPlugins.includes(plugin.name),
     )
 
     expect(filteredPlugins).toHaveLength(2)
@@ -95,8 +95,8 @@ describe('Plugin Update Filtering', () => {
     const ignoredPlugins = ['homebridge-plugin-ignored']
 
     // Test identifying ignored plugins with available updates
-    const ignoredWithUpdates = mockPlugins.filter(plugin => 
-      ignoredPlugins.includes(plugin.name) && plugin.updateAvailable
+    const ignoredWithUpdates = mockPlugins.filter(plugin =>
+      ignoredPlugins.includes(plugin.name) && plugin.updateAvailable,
     )
 
     expect(ignoredWithUpdates).toHaveLength(1)

@@ -54,7 +54,7 @@
     "package.json"
   ],
   "engines": {
-    "homebridge": "^1.8.5 || ^2.0.0 || ^2.0.0-beta.29 || ^2.0.0-alpha.38",
+    "homebridge": "^1.11.4 || ^2.0.0-beta.104",
     "node": "^20 || ^22 || ^24"
   },
   "scripts": {
@@ -74,34 +74,23 @@
     "docs:lint": "typedoc --emit none --treatWarningsAsErrors"
   },
   "dependencies": {
-    "@homebridge/plugin-ui-utils": "^2.1.0",
-    "axios": "^1.13.1",
-    "axios-retry": "^4.5.0",
+    "@homebridge/plugin-ui-utils": "^2.2.3",
     "cacheable-lookup": "^7.0.0",
-    "croner": "^9.1.0",
-    "jsonwebtoken": "^9.0.2"
+    "croner": "^10.0.1",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^6.2.0",
-    "@types/aes-js": "^3.1.4",
-    "@types/debug": "^4.1.12",
-    "@types/fs-extra": "^11.0.4",
-    "@types/mdast": "^4.0.4",
-    "@types/node": "^24.9.2",
-    "@types/semver": "^7.7.1",
-    "@types/source-map-support": "^0.5.10",
-    "@vitest/coverage-v8": "^4.0.6",
-    "ajv": "^8.17.1",
-    "eslint": "^9.39.0",
-    "eslint-plugin-format": "^1.0.2",
-    "eslint-plugin-import": "^2.32.0",
-    "homebridge": "^1.11.1",
-    "homebridge-config-ui-x": "^5.8.0",
-    "nodemon": "^3.1.10",
+    "@antfu/eslint-config": "^8.2.0",
+    "@types/debug": "^4.1.13",
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^10.2.1",
+    "eslint-plugin-format": "^2.0.1",
+    "homebridge": "^1.11.4",
+    "homebridge-config-ui-x": "^5.22.0",
+    "nodemon": "^3.1.14",
     "shx": "^0.4.0",
-    "ts-node": "^10.9.2",
-    "typedoc": "^0.28.14",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.6"
+    "typedoc": "^0.28.19",
+    "vitest": "^4.1.5"
   }
 }
