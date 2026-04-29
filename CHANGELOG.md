@@ -1,3 +1,30 @@
+## [3.0.2](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v3.0.2) (2026-05-02)
+
+### Enhancements
+- Refactored sensor handling into shared protocol abstractions with a new unified sensor base:
+  - Added `MatterSensor` and `HAPSensor` implementations in `src/sensorBase.ts`.
+  - Added `UpdateSensor` orchestration in `src/updateSensor.ts`.
+  - Simplified platform classes by delegating sensor behavior to shared abstractions.
+- Improved runtime platform selection and startup behavior:
+  - Strengthened HAP/Matter proxy logic in `src/utils.ts`.
+  - Added explicit protocol selection flow from platform constructors to update sensor initialization.
+  - Added debug-level protocol selection logs for easier troubleshooting without noisy normal logs.
+
+### Bug Fixes
+- Fixed Matter startup regression where cached Matter accessories could be treated as orphaned on restart:
+  - Ensured stable proxy instantiation/delegation for Homebridge platform lifecycle handling.
+  - Improved Matter capability detection compatibility across Homebridge API shapes.
+  - Prevented mixed protocol registration by explicitly selecting `hap` or `matter` for sensor wiring.
+- Hardened accessory handling across platform implementations:
+  - Improved update/failure sensor registration and restore behavior in both HAP and Matter paths.
+
+### Other
+- Updated tests for platform proxy behavior and protocol selection edge cases in `src/utils.test.ts`.
+- Updated dependencies and lockfile metadata.
+- Regenerated docs and TypeDoc assets.
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-plugin-update-check/compare/v3.0.1...v3.0.2
+
 ## [3.0.1](https://github.com/homebridge-plugins/homebridge-plugin-update-check/releases/tag/v3.0.1) (2026-04-29)
 
 ### Bug Fixes

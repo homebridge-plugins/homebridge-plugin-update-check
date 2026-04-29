@@ -1,158 +1,176 @@
 # homebridge-plugin-update-check
 
-A TypeScript-based Homebridge plugin that creates HomeKit sensors to notify when updates are available for Homebridge, Homebridge UI, plugins, and Docker containers. The plugin uses either homebridge-config-ui-x API or npm-check-updates as a fallback to check for updates.
+A TypeScript Homebridge plugin that exposes update availability as sensors and supports both HAP and Matter at runtime.
 
-Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
+Current focus of this repository:
+- Dual protocol support with runtime proxy selection (Matter preferred when available, HAP fallback otherwise)
+- Two managed sensors:
+  - Main update sensor (updates available)
+  - Failure sensor (auto-update failure state)
+- Update checks for Node.js, Homebridge, Homebridge UI, plugins, and Docker (Docker check-only)
+- Optional auto-update execution for Node.js, Homebridge, Homebridge UI, and plugins
+- Failure propagation from auto-update flow to the dedicated failure sensor
+
+Always use these instructions first.
 
 ## Working Effectively
 
 ### Initial Setup
-Bootstrap the repository in a fresh environment:
 ```bash
-npm install  # Takes ~30 seconds. NEVER CANCEL.
+npm install
 ```
 
-### Build Process
-Build the TypeScript code and prepare distribution files:
+### Build
 ```bash
-npm run build  # Takes ~4 seconds. Compiles TS + copies UI files
+npm run build
 ```
 
-**Build Details:**
-- `npm run clean` - Removes dist/ directory (~0.2 seconds)
-- `tsc` - Compiles TypeScript to JavaScript (~2 seconds)  
-- `npm run plugin-ui` - Copies UI files to dist/ (~0.1 seconds)
+Build details:
+- `npm run clean` removes `dist/`
+- `tsc` compiles TypeScript
+- `npm run plugin-ui` copies UI assets to `dist/homebridge-ui/public/`
 
-### Testing
-Run the test suite:
+### Test
 ```bash
-npx vitest run  # Takes <1 second
+npx vitest run
 ```
 
-The project has minimal test coverage with only configuration type tests in `src/configTypes.test.ts`.
-
-### Linting and Code Quality
-Always run these before committing changes:
+### Lint
 ```bash
-npm run lint      # Takes ~2 seconds. Runs ESLint on TypeScript files
-npm run lint:fix  # Auto-fixes ESLint issues
+npm run lint
+npm run lint:fix
 ```
 
-### Documentation
-Generate and validate TypeDoc documentation:
+### Docs
 ```bash
-npm run docs       # Takes ~2 seconds. Generates docs/ directory
-npm run docs:lint  # Takes ~5 seconds. Validates docs with warnings as errors
+npm run docs
+npm run docs:lint
 ```
 
-### Full Validation Pipeline
-Run the complete validation used in CI:
+### Full Local Validation
 ```bash
-npm run prepublishOnly  # Takes ~17 seconds. Runs lint + build + plugin-ui + docs + docs:lint
+npm run lint && npm run build && npx vitest run && node -c dist/index.js
 ```
 
-### Development Workflow
-For continuous development with auto-rebuild:
+### CI-Equivalent Validation
 ```bash
-npm run watch  # Builds, sets up plugin-ui, links globally, and runs nodemon
-```
-**Note**: This script is intended for use in a Homebridge development environment.
-
-### Dependency Management
-Check for outdated dependencies:
-```bash
-npm run check  # Runs npm install && npm outdated
+npm run prepublishOnly
 ```
 
-## Validation
+## Architecture (Current)
 
-**CRITICAL**: This is a Homebridge plugin - it CANNOT be run standalone like a typical application. It requires integration with a Homebridge environment and HomeKit.
+### Platform Selection
+- `src/index.ts` registers a proxy platform constructor.
+- `src/utils.ts` (`createPlatformProxy`) selects Matter only when:
+  - `enableMatter !== false`
+  - `preferMatter !== false`
+  - Homebridge reports Matter available and enabled
+- Otherwise, platform falls back to HAP.
 
-### Manual Validation Steps
-After making changes, always:
-1. **Build validation**: Run `npm run build` and verify `dist/` contains compiled JS files
-2. **Syntax check**: Run `node -c dist/index.js` to verify JavaScript syntax
-3. **Lint validation**: Run `npm run lint` to ensure code style compliance
-4. **Test validation**: Run `npx vitest run` to ensure tests pass
-5. **Documentation**: Run `npm run docs:lint` to validate TypeDoc comments
+### Platform Implementations
+- `src/Platform.HAP.ts`
+  - Implements `DynamicPlatformPlugin`
+  - Manages cached accessory restoration
+  - Registers both update and failure accessories in HAP
+- `src/Platform.Matter.ts`
+  - Registers separate Matter devices for update and failure sensors
 
-### Build Artifacts Validation
-Verify these files exist after building:
-- `dist/index.js` - Main plugin entry point
-- `dist/index.d.ts` - TypeScript declarations
-- `dist/configTypes.js` - Configuration types
-- `dist/ui-api.js` - Homebridge UI integration
-- `dist/homebridge-ui/public/index.html` - UI component
+### Sensor Abstraction
+- `src/sensorBase.ts`
+  - `SensorProtocol` abstraction
+  - `HAPSensor` implementation
+  - `MatterSensor` implementation
+- `src/updateSensor.ts`
+  - Orchestrates update checks and update sensor state
+  - Calls `onFailureStateChange` callback when auto-update failures occur
+- `src/failureSensor.ts`
+  - Orchestrates failure sensor state for HAP or Matter
 
-### CI Pipeline Compatibility
-The GitHub Actions workflow uses the homebridge shared workflow. Always run these locally before pushing:
-```bash
-npm install && npm run lint && npm run build && npx vitest run
-```
+### Update Engine
+- `src/updateCheckCore.ts`
+  - Periodic check scheduling with cron
+  - Node.js LTS version check
+  - Homebridge/Homebridge UI/plugin checks via UI API
+  - Docker update checks (notification only)
+  - Optional auto-update execution for:
+    - Node.js (`hb-service update-node` when supported)
+    - Homebridge
+    - Homebridge UI
+    - plugins
+  - Tracks last auto-update failure state for failure sensor signaling
 
-## Project Structure
+### UI API and Update Operations
+- `src/ui-api.ts`
+  - Reads Homebridge UI config/secrets
+  - API calls for versions/plugins/ignored plugins
+  - Backup creation attempt before auto-update (when UI is configured)
+  - Update operations via npm install for Homebridge and plugins
+  - Restart operation with endpoint fallbacks and process-exit fallback
 
-### Key Source Files
-- `src/index.ts` - Main plugin implementation (PluginUpdatePlatform class)
-- `src/configTypes.ts` - Configuration interface definitions  
-- `src/ui-api.ts` - Homebridge Config UI X integration
-- `src/configTypes.test.ts` - Basic configuration type tests
-- `src/homebridge-ui/` - Plugin UI components
+## Configuration (Current)
 
-### Configuration Files
-- `package.json` - Dependencies and npm scripts
-- `tsconfig.json` - TypeScript compiler configuration
-- `eslint.config.js` - ESLint rules (uses @antfu/eslint-config)
-- `typedoc.json` - Documentation generation settings
-- `config.schema.json` - Homebridge configuration schema
+Source of truth:
+- `src/configTypes.ts`
+- `config.schema.json`
 
-### Build Outputs
-- `dist/` - Compiled JavaScript and type definitions
-- `docs/` - Generated TypeDoc documentation (not committed)
+Key options:
+- Protocol selection:
+  - `enableMatter`
+  - `preferMatter`
+- Sensor behavior:
+  - `sensorType`
+  - `failureSensorType`
+- Update checks:
+  - `checkNodeUpdates`
+  - `checkHomebridgeUpdates`
+  - `checkHomebridgeUIUpdates`
+  - `checkPluginUpdates`
+  - `checkDockerUpdates`
+- Auto-update behavior:
+  - `autoUpdateNode`
+  - `autoUpdateHomebridge`
+  - `autoUpdateHomebridgeUI`
+  - `autoUpdatePlugins`
+  - `allowDirectNpmUpdates`
+  - `autoRestartAfterUpdates`
+- Other:
+  - `respectDisabledPlugins`
+  - `initialCheckDelay`
 
-### Key Dependencies
-- `homebridge` - Platform integration (dev dependency for types)
-- `npm-check-updates` - Fallback update checker
-- `axios` - HTTP client for API calls
-- `croner` - Cron job scheduling
-- `jsonwebtoken` - Homebridge UI authentication
+## Validation Requirements For Any Change
 
-## Common Tasks
+After code changes, run:
+1. `npm run build`
+2. `node -c dist/index.js`
+3. `npm run lint`
+4. `npx vitest run`
+5. `npm run docs:lint`
 
-### Adding New Features
-1. Modify TypeScript files in `src/`
-2. Add corresponding tests in `src/*.test.ts` if needed
-3. Update configuration schema in `config.schema.json` if adding config options
-4. Run `npm run build && npm run lint && npx vitest run`
-5. Update documentation comments for TypeDoc if adding public APIs
+Also verify build outputs exist:
+- `dist/index.js`
+- `dist/index.d.ts`
+- `dist/configTypes.js`
+- `dist/ui-api.js`
+- `dist/homebridge-ui/public/index.html`
 
-### Debugging Build Issues
-1. Check TypeScript compilation: `npx tsc --noEmit`
-2. Validate ESLint configuration: `npm run lint`
-3. Clean and rebuild: `npm run clean && npm run build`
+## Development Constraints
 
-### Release Process
-The project uses automated releases via GitHub Actions. The `prepublishOnly` script ensures quality before publishing:
-```bash
-npm run prepublishOnly  # Must pass before any release
-```
+- This is a Homebridge plugin and cannot be validated end-to-end without a Homebridge runtime.
+- Matter behavior can be code-validated and build-validated locally, but commissioning and Home app behavior require a real Homebridge Matter environment.
+- Docker updates are intentionally check-only; do not implement in-container self-update execution.
 
-## Architecture Notes
+## Matter Mapping Reference
 
-### Plugin Functionality
-- Creates HomeKit sensors (motion, contact, occupancy, etc.) that trigger when updates are available
-- Checks updates hourly via cron jobs
-- Supports checking Homebridge core, Homebridge UI, plugins, and Docker updates independently
-- Uses homebridge-config-ui-x API when available, falls back to npm-check-updates
+For Matter/HomeKit sensor deviceType, cluster, and attribute mapping, use the homebridge-matter wiki as the authoritative reference:
+- Introduction: https://github.com/homebridge-plugins/homebridge-matter/wiki/Introduction
+- Enabling Matter: https://github.com/homebridge-plugins/homebridge-matter/wiki/Enabling-Matter
+- Core Concepts: https://github.com/homebridge-plugins/homebridge-matter/wiki/Core-Concepts
+- State Management: https://github.com/homebridge-plugins/homebridge-matter/wiki/State-Management
+- API Reference: https://github.com/homebridge-plugins/homebridge-matter/wiki/API-Reference
+- Matter Types: https://github.com/homebridge-plugins/homebridge-matter/wiki/Matter-Types
+- Sensors reference: https://github.com/homebridge-plugins/homebridge-matter/wiki/Section-7-Sensors
 
-### Configuration Options
-See `src/configTypes.ts` for the complete interface. Key options:
-- `platform`: Must be "PluginUpdate"
-- `sensorType`: Type of HomeKit sensor to create
-- `checkHomebridgeUpdates`, `checkHomebridgeUIUpdates`, `checkPluginUpdates`, `checkDockerUpdates`: Boolean flags
-- `forceNcu`: Force use of npm-check-updates instead of UI API
-
-### Development Limitations
-- Cannot test actual update checking without Homebridge environment
-- Cannot interact with HomeKit without proper Homebridge setup
-- Limited to build/lint/unit test validation in development environment
+When sensor mappings change, update:
+- `src/sensorBase.ts`
+- `config.schema.json` (if user-facing options changed)
+- tests as needed

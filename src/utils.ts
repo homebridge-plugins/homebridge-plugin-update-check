@@ -24,16 +24,42 @@ export function createPlatformProxy(HAPPlatform: any, MatterPlatform: any): any 
     constructor(log: any, config: PlatformConfig, api: any) {
       const preferMatter = (config as any).preferMatter ?? true
       const enableMatter = (config as any).enableMatter ?? true
-      const matterAvailable = !!(api?.isMatterAvailable?.() && api?.isMatterEnabled?.())
+      const hasMatterApi = !!api?.matter
+      const matterAvailable = typeof api?.isMatterAvailable === 'function' ? !!api.isMatterAvailable() : hasMatterApi
+      const matterEnabled = typeof api?.isMatterEnabled === 'function' ? !!api.isMatterEnabled() : hasMatterApi
 
-      if (enableMatter && preferMatter && MatterPlatform && matterAvailable) {
+      if (enableMatter && preferMatter && MatterPlatform && hasMatterApi && matterAvailable && matterEnabled) {
+        log?.debug?.('[Protocol] Using Matter platform implementation')
         this.impl = new MatterPlatform(log, config, api)
-        return this.impl
+        return
+      }
+
+      if (enableMatter && preferMatter) {
+        const reasons: string[] = []
+        if (!MatterPlatform) {
+          reasons.push('Matter platform class unavailable')
+        }
+        if (!hasMatterApi) {
+          reasons.push('api.matter missing')
+        }
+        if (!matterAvailable) {
+          reasons.push('Matter not available')
+        }
+        if (!matterEnabled) {
+          reasons.push('Matter not enabled')
+        }
+        const reasonText = reasons.length ? reasons.join(', ') : 'unknown reason'
+        log?.debug?.(`[Protocol] Falling back to HAP despite Matter preference: ${reasonText}`)
+      } else {
+        log?.debug?.('[Protocol] Using HAP platform implementation')
       }
 
       // Fallback to HAP
       this.impl = new HAPPlatform(log, config, api)
-      return this.impl
+    }
+
+    configureAccessory(...args: any[]): any {
+      return this.impl?.configureAccessory?.(...args)
     }
   }
 }

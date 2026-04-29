@@ -49,6 +49,7 @@ describe('createPlatformProxy', () => {
 
     // api with Matter support available and enabled
     const api = {
+      matter: {},
       isMatterAvailable: () => true,
       isMatterEnabled: () => true,
     }
@@ -78,6 +79,7 @@ describe('createPlatformProxy', () => {
 
     // Matter available but disabled in config
     const api = {
+      matter: {},
       isMatterAvailable: () => true,
       isMatterEnabled: () => true,
     }
@@ -107,6 +109,7 @@ describe('createPlatformProxy', () => {
 
     // Matter available but not preferred
     const api = {
+      matter: {},
       isMatterAvailable: () => true,
       isMatterEnabled: () => true,
     }
@@ -114,5 +117,33 @@ describe('createPlatformProxy', () => {
 
     expect(hapConstructed).toHaveLength(1)
     expect(matterConstructed).toHaveLength(0)
+  })
+
+  it('should use Matter when isMatter* APIs are unavailable but matter API exists', () => {
+    const hapConstructed: any[] = []
+    const matterConstructed: any[] = []
+
+    class MockHAPPlatform {
+      constructor(log: any, config: any, api: any) {
+        hapConstructed.push({ log, config, api })
+      }
+    }
+
+    class MockMatterPlatform {
+      constructor(log: any, config: any, api: any) {
+        matterConstructed.push({ log, config, api })
+      }
+    }
+
+    const ProxyCtor = createPlatformProxy(MockHAPPlatform, MockMatterPlatform)
+
+    // API shape used in some Homebridge versions/plugins where isMatter* may not exist.
+    const api = {
+      matter: {},
+    }
+    new ProxyCtor('log', { preferMatter: true, enableMatter: true }, api)
+
+    expect(matterConstructed).toHaveLength(1)
+    expect(hapConstructed).toHaveLength(0)
   })
 })
