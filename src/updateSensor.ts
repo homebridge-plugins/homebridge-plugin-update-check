@@ -45,25 +45,24 @@ export class UpdateSensor {
   }
 
   addUpdateSensor(): void {
-    if (this.registered) {
-      return
+    if (!this.registered) {
+      const deviceName = (this.config as any).name || 'Plugin Update Check'
+      // Create or get accessory (for HAP) or just pass config (for Matter)
+      if (!this.api.matter) {
+        // HAP: create accessory and register
+        const uuid = this.api.hap.uuid.generate(UPDATE_SENSOR_UUID_KEY)
+        const Accessory = this.api.platformAccessory
+        const accessory = new Accessory(deviceName, uuid)
+        this.sensor.configure(accessory)
+        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])
+        this.accessory = accessory
+      } else {
+        // Matter: configure with dummy accessory (not used)
+        this.sensor.configure({ displayName: deviceName } as PlatformAccessory)
+      }
+      this.registered = true
     }
-    const deviceName = (this.config as any).name || 'Plugin Update Check'
-    // Create or get accessory (for HAP) or just pass config (for Matter)
-    if (!this.api.matter) {
-      // HAP: create accessory and register
-      const uuid = this.api.hap.uuid.generate(UPDATE_SENSOR_UUID_KEY)
-      const Accessory = this.api.platformAccessory
-      const accessory = new Accessory(deviceName, uuid)
-      this.sensor.configure(accessory)
-      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])
-      this.accessory = accessory
-    } else {
-      // Matter: configure with dummy accessory (not used)
-      this.sensor.configure({ displayName: deviceName } as PlatformAccessory)
-    }
-    this.registered = true
-    // Initial check after delay
+    // Always start checks (whether accessory was newly created or restored from cache)
     setTimeout(() => {
       this.doCheck()
     }, this.updateCore.initialCheckDelay * 1000)
