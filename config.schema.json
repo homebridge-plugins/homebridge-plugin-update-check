@@ -184,6 +184,10 @@
           {
             "title": "Carbon Monoxide Sensor",
             "enum": ["monoxide"]
+          },
+          {
+            "title": "None (Disabled)",
+            "enum": ["none"]
           }
         ]
       },

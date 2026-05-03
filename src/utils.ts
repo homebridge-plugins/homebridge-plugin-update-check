@@ -1,6 +1,27 @@
 import type { PlatformConfig } from 'homebridge'
 
 /**
+ * Returns true if the failure sensor should be registered and active.
+ *
+ * The failure sensor is disabled when:
+ * - `failureSensorType` is explicitly set to `"none"`, OR
+ * - none of the auto-update options (autoUpdateNode, autoUpdateHomebridge,
+ *   autoUpdateHomebridgeUI, autoUpdatePlugins) are enabled, because without
+ *   auto-updates there can never be an auto-update failure to report.
+ */
+export function isFailureSensorEnabled(config: PlatformConfig): boolean {
+  if ((config as any).failureSensorType === 'none') {
+    return false
+  }
+  return !!(
+    (config as any).autoUpdateNode
+    || (config as any).autoUpdateHomebridge
+    || (config as any).autoUpdateHomebridgeUI
+    || (config as any).autoUpdatePlugins
+  )
+}
+
+/**
  * Factory function that creates a platform proxy constructor.
  * Selects between HAP and Matter platform implementations at runtime
  * based on whether Homebridge Matter support is available and enabled.
