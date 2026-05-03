@@ -1,5 +1,7 @@
 import type { PlatformConfig } from 'homebridge'
 
+import type { PluginUpdatePlatformConfig } from './configTypes.js'
+
 /**
  * Returns true if the failure sensor should be registered and active.
  *
@@ -10,15 +12,11 @@ import type { PlatformConfig } from 'homebridge'
  *   auto-updates there can never be an auto-update failure to report.
  */
 export function isFailureSensorEnabled(config: PlatformConfig): boolean {
-  if ((config as any).failureSensorType === 'none') {
+  const cfg = config as PluginUpdatePlatformConfig
+  if (cfg.failureSensorType === 'none') {
     return false
   }
-  return !!(
-    (config as any).autoUpdateNode
-    || (config as any).autoUpdateHomebridge
-    || (config as any).autoUpdateHomebridgeUI
-    || (config as any).autoUpdatePlugins
-  )
+  return !!(cfg.autoUpdateNode || cfg.autoUpdateHomebridge || cfg.autoUpdateHomebridgeUI || cfg.autoUpdatePlugins)
 }
 
 /**

@@ -14,7 +14,7 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private readonly updateSensorUuid: string
   private readonly failureSensorUuid: string
   private failureSensorRegistered = false
-  private staleFailureAccessory?: PlatformAccessory
+  private cachedFailureAccessory?: PlatformAccessory
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     this.log = log
@@ -34,9 +34,9 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private addFailureSensor(): void {
     // If the failure sensor has been disabled, remove any previously cached accessory
     if (!isFailureSensorEnabled(this.config)) {
-      if (this.staleFailureAccessory) {
-        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [this.staleFailureAccessory])
-        this.staleFailureAccessory = undefined
+      if (this.cachedFailureAccessory) {
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [this.cachedFailureAccessory])
+        this.cachedFailureAccessory = undefined
         this.log.info('Removed cached failure sensor accessory (failure sensor is disabled)')
       }
       return
@@ -70,9 +70,9 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
     // Restore for failure sensor
     if (accessory.UUID === this.failureSensorUuid) {
       if (!isFailureSensorEnabled(this.config)) {
-        // Sensor is disabled — keep track of the stale accessory so it can be
+        // Sensor is disabled — keep track of the cached accessory so it can be
         // unregistered once `didFinishLaunching` fires.
-        this.staleFailureAccessory = accessory
+        this.cachedFailureAccessory = accessory
         return
       }
       this.failureSensor.configure(accessory)
