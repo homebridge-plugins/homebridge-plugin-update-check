@@ -1,3 +1,11 @@
+## [3.1.0](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.0) (2026-05-04)
+
+### Enhancements
+
+* **Config `Platform` must be manually updated to `HomebridgeUpdater` instead of `PluginUpdate`.**
+
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-updater/compare/v3.0.7...v3.1.0
+
 ## [3.0.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.0.7) (2026-05-04)
 
 ### Bug Fixes
