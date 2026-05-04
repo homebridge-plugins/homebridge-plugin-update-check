@@ -128,7 +128,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     function addUpdateSensor() {
       if (!registered) {
         // would create a new accessory and register it
-        mockApi.registerPlatformAccessories(PLUGIN_NAME, 'HomebridgeUpdater', [{ displayName: 'new-accessory' }])
+        mockApi.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [{ displayName: 'new-accessory' }])
         registered = true
       }
     }
