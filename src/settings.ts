@@ -11,3 +11,9 @@ export const PLUGIN_NAME = '@homebridge-plugins/homebridge-updater'
 export const UPDATE_SENSOR_UUID_KEY = 'PluginUpdateCheck-UpdateSensor'
 
 export const FAILURE_SENSOR_UUID_KEY = 'PluginUpdateCheck-FailureSensor'
+
+/**
+ * UUID key used by v2.x of homebridge-plugin-update-check.
+ * Stored here to support migration of cached accessories from old installs.
+ */
+export const LEGACY_UPDATE_SENSOR_UUID_KEY = 'PluginUpdate'
