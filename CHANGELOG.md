@@ -4,6 +4,7 @@
 ### Bug Fixes
 
 * persist failureSensorType to JSON config by marking it required in schema ([#245](https://github.com/homebridge-plugins/homebridge-updater/issues/245)) ([accf14b](https://github.com/homebridge-plugins/homebridge-updater/commit/accf14b8343609b4534bdf9224d9866505dd056f))
+* fix scoped plugin upgrade clearing config: migrate `PluginUpdate` → `HomebridgeUpdater` by reading `config.json` directly instead of relying on the Homebridge UI API, which cannot return legacy platform entries for the new plugin name ([#246](https://github.com/homebridge-plugins/homebridge-updater/issues/246))
 
 
 
