@@ -222,7 +222,7 @@
         "properties": {}
       }
     },
-    "required": ["name", "sensorType"]
+    "required": ["name", "sensorType", "failureSensorType"]
   },
   "layout": [
     "name",
