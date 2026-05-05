@@ -9,6 +9,7 @@ export class PluginUpdateMatterPlatform {
   private readonly api: API
   private updateSensor: UpdateSensor
   private failureSensor: FailureSensor
+  private readonly staleAccessories: PlatformAccessory[] = []
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     this.api = api
@@ -23,14 +24,25 @@ export class PluginUpdateMatterPlatform {
       const failureDeviceName = `${deviceName} Failure`
       this.failureSensor.configure({ displayName: failureDeviceName } as any)
     }
+    // Defer removal of stale HAP accessories until the bridge is fully initialized
+    api.on('didFinishLaunching', this.removeStaleAccessories.bind(this))
   }
 
   /**
    * Called by Homebridge for each accessory found in the platform cache.
-   * When running in Matter mode, all cached HAP accessories are stale — unregister
-   * them immediately to prevent ghost accessories from appearing in HomeKit.
+   * When running in Matter mode, all cached HAP accessories are stale — collect
+   * them here so they can be removed once `didFinishLaunching` fires, at which
+   * point the bridge is fully initialized and can process unregister calls.
    */
   configureAccessory(accessory: PlatformAccessory): void {
-    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])
+    this.staleAccessories.push(accessory)
+  }
+
+  private removeStaleAccessories(): void {
+    if (this.staleAccessories.length === 0) {
+      return
+    }
+    this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [...this.staleAccessories])
+    this.staleAccessories.length = 0
   }
 }
