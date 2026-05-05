@@ -41,6 +41,7 @@ describe('config schema validation', () => {
         const config = {
           name,
           sensorType: 'motion',
+          failureSensorType: 'motion',
           platform: 'HomebridgeUpdater',
         }
 
@@ -118,6 +119,7 @@ describe('config schema validation', () => {
       const config = {
         name: maxLengthName,
         sensorType: 'motion',
+        failureSensorType: 'motion',
         platform: 'HomebridgeUpdater',
       }
 
