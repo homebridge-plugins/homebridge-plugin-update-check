@@ -152,4 +152,34 @@ describe('createPlatformProxy', () => {
     expect(matterConstructed).toHaveLength(1)
     expect(hapConstructed).toHaveLength(0)
   })
+
+  it('should delegate configureAccessory to the Matter impl (stale HAP cleanup)', () => {
+    const configuredAccessories: any[] = []
+
+    class MockHAPPlatform {
+      constructor(_log: any, _config: any, _api: any) {}
+      configureAccessory(accessory: any) {
+        // Should not be called when Matter is active
+        configuredAccessories.push({ platform: 'hap', accessory })
+      }
+    }
+
+    class MockMatterPlatform {
+      constructor(_log: any, _config: any, _api: any) {}
+      configureAccessory(accessory: any) {
+        configuredAccessories.push({ platform: 'matter', accessory })
+      }
+    }
+
+    const ProxyCtor = createPlatformProxy(MockHAPPlatform, MockMatterPlatform)
+    const api = { matter: {}, isMatterAvailable: () => true, isMatterEnabled: () => true }
+    const proxy = new ProxyCtor('log', { enableMatter: true }, api)
+
+    const staleAccessory = { UUID: 'old-hap-uuid', displayName: 'Homebridge Plugin Update' }
+    proxy.configureAccessory(staleAccessory)
+
+    expect(configuredAccessories).toHaveLength(1)
+    expect(configuredAccessories[0].platform).toBe('matter')
+    expect(configuredAccessories[0].accessory).toBe(staleAccessory)
+  })
 })
