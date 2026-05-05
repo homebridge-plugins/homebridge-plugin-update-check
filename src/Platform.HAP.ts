@@ -18,6 +18,8 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
   private cachedFailureAccessory?: PlatformAccessory
   /** Cached accessory with the legacy v2.x UUID — resolved in handleLegacyMigration */
   private cachedLegacyUpdateAccessory?: PlatformAccessory
+  /** Cached accessory with the current UUID — tracked so it can be replaced by the legacy one in Scenario B */
+  private cachedCurrentUpdateAccessory?: PlatformAccessory
   /** True when a v3 update-sensor accessory was found in the cache (current UUID) */
   private updateSensorCached = false
 
@@ -46,8 +48,11 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
    * 1. Only the legacy UUID is in the cache (fresh v2→v3 migration): configure the
    *    update sensor on the legacy accessory so that {@link UpdateSensor.addUpdateSensor}
    *    sees `registered = true` and does NOT create a duplicate.
-   * 2. Both legacy and current UUIDs are in the cache (user already ran v3 once):
-   *    unregister the stale legacy accessory and let the current-UUID accessory continue.
+   * 2. Both legacy and current UUIDs are in the cache (user already ran a newer version
+   *    once before this migration existed, creating a duplicate): remove the newer
+   *    empty accessory and promote the legacy one so that the user's HomeKit
+   *    customisations (room, name, automations) that are tied to the legacy UUID are
+   *    preserved.
    */
   private handleLegacyMigration(): void {
     if (!this.cachedLegacyUpdateAccessory) {
@@ -55,10 +60,16 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
     }
 
     if (this.updateSensorCached) {
-      // Current-UUID accessory already recognised — remove the stale legacy one
-      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [this.cachedLegacyUpdateAccessory])
+      // Both UUIDs found — the current-UUID accessory was created empty when the legacy
+      // one was first ignored.  Prefer the legacy accessory so that any HomeKit
+      // customisations the user applied to it are retained.
+      if (this.cachedCurrentUpdateAccessory) {
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [this.cachedCurrentUpdateAccessory])
+        this.cachedCurrentUpdateAccessory = undefined
+      }
+      this.updateSensor.configureAccessory(this.cachedLegacyUpdateAccessory)
       this.cachedLegacyUpdateAccessory = undefined
-      this.log.info('Removed stale legacy update sensor accessory (migrated to current UUID)')
+      this.log.info('Migrated update sensor to legacy cached accessory (preserved HomeKit customisations)')
       return
     }
 
@@ -103,6 +114,7 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
     if (accessory.UUID === this.updateSensorUuid) {
       this.updateSensor.configureAccessory(accessory)
       this.updateSensorCached = true
+      this.cachedCurrentUpdateAccessory = accessory
       return
     }
     // Restore for failure sensor

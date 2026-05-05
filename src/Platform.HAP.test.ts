@@ -89,6 +89,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     const legacyUpdateSensorUuid = mockApi.hap.uuid.generate(LEGACY_UPDATE_SENSOR_UUID_KEY)
 
     let cachedLegacyUpdateAccessory: any = undefined
+    let cachedCurrentUpdateAccessory: any = undefined
     let updateSensorCached = false
 
     // Simulate configureAccessory for each cached accessory
@@ -96,6 +97,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
       if (accessory.UUID === updateSensorUuid) {
         mockUpdateSensor.configureAccessory(accessory)
         updateSensorCached = true
+        cachedCurrentUpdateAccessory = accessory
         continue
       }
       if (accessory.UUID === legacyUpdateSensorUuid) {
@@ -112,9 +114,15 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
       if (!cachedLegacyUpdateAccessory) return
 
       if (updateSensorCached) {
-        mockApi.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedLegacyUpdateAccessory])
+        // Both UUIDs found — remove the newer empty accessory, promote the legacy one
+        // so the user's HomeKit customisations are preserved.
+        if (cachedCurrentUpdateAccessory) {
+          mockApi.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [cachedCurrentUpdateAccessory])
+          cachedCurrentUpdateAccessory = undefined
+        }
+        mockUpdateSensor.configureAccessory(cachedLegacyUpdateAccessory)
         cachedLegacyUpdateAccessory = undefined
-        mockLog.info('Removed stale legacy update sensor accessory (migrated to current UUID)')
+        mockLog.info('Migrated update sensor to legacy cached accessory (preserved HomeKit customisations)')
         return
       }
 
@@ -160,7 +168,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     expect(registered).toBe(true)
   })
 
-  it('Scenario B: both legacy and current UUID in cache — must unregister the stale legacy accessory', () => {
+  it('Scenario B: both legacy and current UUID in cache — must preserve legacy accessory and remove the newer empty duplicate', () => {
     const { mockLog, mockApi, mockUpdateSensor, uuidMap } = buildMocks()
 
     const v3Accessory = { UUID: uuidMap[UPDATE_SENSOR_UUID_KEY], displayName: 'PluginUpdate' }
@@ -168,13 +176,13 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
 
     runMigrationSimulation(mockApi, mockLog, mockUpdateSensor, uuidMap, [v3Accessory, legacyAccessory])
 
-    // v3 accessory configured as update sensor
-    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledWith(v3Accessory)
-    // Legacy unregistered
-    expect(mockApi.unregisterPlatformAccessories).toHaveBeenCalledWith(PLUGIN_NAME, PLATFORM_NAME, [legacyAccessory])
-    // No new accessory created (v3 already registered)
+    // Legacy accessory promoted as update sensor (preserves HomeKit customisations)
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledWith(legacyAccessory)
+    // Current-UUID empty duplicate is removed
+    expect(mockApi.unregisterPlatformAccessories).toHaveBeenCalledWith(PLUGIN_NAME, PLATFORM_NAME, [v3Accessory])
+    // No new accessory created
     expect(mockApi.registerPlatformAccessories).not.toHaveBeenCalled()
-    expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('Removed stale legacy update sensor accessory'))
+    expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('Migrated update sensor to legacy cached accessory'))
   })
 
   it('Scenario B (legacy processed first): same result regardless of configureAccessory order', () => {
@@ -186,8 +194,9 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     // Legacy accessory arrives first in configureAccessory order
     runMigrationSimulation(mockApi, mockLog, mockUpdateSensor, uuidMap, [legacyAccessory, v3Accessory])
 
-    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledWith(v3Accessory)
-    expect(mockApi.unregisterPlatformAccessories).toHaveBeenCalledWith(PLUGIN_NAME, PLATFORM_NAME, [legacyAccessory])
+    // Legacy accessory still wins regardless of order
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledWith(legacyAccessory)
+    expect(mockApi.unregisterPlatformAccessories).toHaveBeenCalledWith(PLUGIN_NAME, PLATFORM_NAME, [v3Accessory])
     expect(mockApi.registerPlatformAccessories).not.toHaveBeenCalled()
   })
 
