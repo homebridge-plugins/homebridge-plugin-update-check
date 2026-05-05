@@ -176,8 +176,11 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
 
     runMigrationSimulation(mockApi, mockLog, mockUpdateSensor, uuidMap, [v3Accessory, legacyAccessory])
 
-    // Legacy accessory promoted as update sensor (preserves HomeKit customisations)
-    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledWith(legacyAccessory)
+    // configureAccessory called exactly twice: once for the v3 (during restore) then
+    // again for the legacy during migration — legacy must be the final (last) call.
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledTimes(2)
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenNthCalledWith(1, v3Accessory)
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenLastCalledWith(legacyAccessory)
     // Current-UUID empty duplicate is removed
     expect(mockApi.unregisterPlatformAccessories).toHaveBeenCalledWith(PLUGIN_NAME, PLATFORM_NAME, [v3Accessory])
     // No new accessory created
@@ -194,8 +197,11 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     // Legacy accessory arrives first in configureAccessory order
     runMigrationSimulation(mockApi, mockLog, mockUpdateSensor, uuidMap, [legacyAccessory, v3Accessory])
 
-    // Legacy accessory still wins regardless of order
-    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledWith(legacyAccessory)
+    // Only the v3 accessory is processed during restore (legacy is held), then the
+    // migration promotes the legacy one — so configureAccessory is still called twice
+    // and the legacy accessory is always the last call.
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenCalledTimes(2)
+    expect(mockUpdateSensor.configureAccessory).toHaveBeenLastCalledWith(legacyAccessory)
     expect(mockApi.unregisterPlatformAccessories).toHaveBeenCalledWith(PLUGIN_NAME, PLATFORM_NAME, [v3Accessory])
     expect(mockApi.registerPlatformAccessories).not.toHaveBeenCalled()
   })
