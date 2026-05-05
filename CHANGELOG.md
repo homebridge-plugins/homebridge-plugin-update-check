@@ -1,12 +1,11 @@
-## [3.1.2](https://github.com/homebridge-plugins/homebridge-updater/compare/v3.1.1...v3.1.2) (2026-05-05)
-
+## [3.1.2](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.2) (2026-05-05)
 
 ### Bug Fixes
 
 * persist failureSensorType to JSON config by marking it required in schema ([#245](https://github.com/homebridge-plugins/homebridge-updater/issues/245)) ([accf14b](https://github.com/homebridge-plugins/homebridge-updater/commit/accf14b8343609b4534bdf9224d9866505dd056f))
 * fix scoped plugin upgrade clearing config: migrate `PluginUpdate` → `HomebridgeUpdater` by reading `config.json` directly instead of relying on the Homebridge UI API, which cannot return legacy platform entries for the new plugin name ([#246](https://github.com/homebridge-plugins/homebridge-updater/issues/246))
 
-
+**Full Changelog**: https://github.com/homebridge-plugins/homebridge-updater/compare/v3.1.0...v3.1.2
 
 ## [3.1.0](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.0) (2026-05-04)
 

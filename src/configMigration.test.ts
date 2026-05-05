@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import path from 'node:path'
 
 // Mock node:fs before any imports that use it — vitest hoists vi.mock automatically.
 vi.mock('node:fs', () => ({
@@ -41,8 +42,8 @@ describe('config migration', () => {
 })
 
 describe('migrateLegacyPlatformAlias (direct file migration)', () => {
-  const FAKE_STORAGE = '/fake/homebridge'
-  const FAKE_CONFIG_PATH = `${FAKE_STORAGE}/config.json`
+  const FAKE_STORAGE = path.join(path.sep, 'fake', 'homebridge')
+  const FAKE_CONFIG_PATH = path.resolve(FAKE_STORAGE, 'config.json')
 
   const readFileSyncMock = vi.mocked(fs.readFileSync)
   const writeFileSyncMock = vi.mocked(fs.writeFileSync)
@@ -98,8 +99,6 @@ describe('migrateLegacyPlatformAlias (direct file migration)', () => {
       ],
     }
 
-    // readFileSync is called at least once (for config.json). Any extra calls (e.g. from
-    // the UiApi fallback path) should also not find legacy entries.
     readFileSyncMock.mockReturnValue(JSON.stringify(currentConfig) as any)
     writeFileSyncMock.mockImplementation(() => {})
 

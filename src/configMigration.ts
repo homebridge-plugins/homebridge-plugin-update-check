@@ -8,7 +8,7 @@ import { UiApi } from './ui-api.js'
 
 const LEGACY_PLATFORM_NAME = 'PluginUpdate'
 
-export function migratePlatformAliasInPluginConfigs(configs: Array<Record<string, unknown>>): number {
+export function migratePlatformAliasInPluginConfigs(configs: unknown): number {
   if (!Array.isArray(configs)) {
     return 0
   }
@@ -55,15 +55,15 @@ export async function migrateLegacyPlatformAlias(api: API): Promise<void> {
     }
 
     if (hbConfig?.platforms && Array.isArray(hbConfig.platforms)) {
-      const updatedDirect = migratePlatformAliasInPluginConfigs(hbConfig.platforms as Array<Record<string, unknown>>)
+      const updatedDirect = migratePlatformAliasInPluginConfigs(hbConfig.platforms)
       if (updatedDirect > 0) {
         writeFileSync(configPath, JSON.stringify(hbConfig, null, 4), 'utf8')
-        return
       }
+      // config.json was readable and parseable — no need to try the UI API.
+      return
     }
 
-    // Fallback: use the UI API for cases where the direct file approach found nothing
-    // but the UI API may have additional context (e.g. partial earlier migration).
+    // config.json could not be read or parsed — fall back to the UI API.
     const uiApi = new UiApi(hbStoragePath, silentLog as any)
     if (!uiApi.isConfigured()) {
       return
