@@ -18,7 +18,7 @@ describe('updateSensor cached accessory restore', () => {
     const mockUpdateCore = {
       initialCheckDelay: 0,
       checkUi: vi.fn().mockResolvedValue(0),
-      startScheduledChecks: vi.fn((_cb: () => void) => {
+      startScheduledChecks: vi.fn<(cb: () => void) => void>(() => {
         startScheduledChecksCalls.push(1)
       }),
       getLastAutoUpdateFailed: vi.fn().mockReturnValue(false),
@@ -34,18 +34,6 @@ describe('updateSensor cached accessory restore', () => {
     const mockAccessory = {
       UUID: 'test-uuid',
       displayName: 'Plugin Update Check',
-      on: vi.fn(),
-    }
-    const mockApi = {
-      matter: undefined,
-      hap: {
-        uuid: {
-          generate: vi.fn().mockReturnValue('test-uuid'),
-        },
-      },
-      platformAccessory: vi.fn().mockReturnValue(mockAccessory),
-      registerPlatformAccessories: vi.fn(),
-      user: { storagePath: vi.fn().mockReturnValue('/tmp') },
       on: vi.fn(),
     }
 
@@ -112,14 +100,14 @@ describe('updateSensor cached accessory restore', () => {
     const mockUpdateCore = {
       initialCheckDelay: 0,
       checkUi: vi.fn().mockResolvedValue(1),
-      startScheduledChecks: vi.fn((_cb: () => void) => {
+      startScheduledChecks: vi.fn<(cb: () => void) => void>(() => {
         startScheduledChecksCalls.push(1)
       }),
       getLastAutoUpdateFailed: vi.fn().mockReturnValue(false),
     }
 
     const mockSensor = {
-      configure: vi.fn((_acc?: any) => configureCalls.push(1)),
+      configure: vi.fn<(acc?: any) => void>(() => configureCalls.push(1)),
       setState: vi.fn(),
     }
 

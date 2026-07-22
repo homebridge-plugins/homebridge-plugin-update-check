@@ -16,7 +16,7 @@ export class PluginUpdateMatterPlatform {
     this.failureSensor = new FailureSensor(log, api, config.failureSensorType || config.sensorType, 'matter')
     this.updateSensor = new UpdateSensor(log, config, api, {
       protocol: 'matter',
-      onFailureStateChange: isFailureSensorEnabled(config) ? (failed) => this.failureSensor.setState(failed) : undefined,
+      onFailureStateChange: isFailureSensorEnabled(config) ? failed => this.failureSensor.setState(failed) : undefined,
     })
     // Register the failure sensor as a separate Matter device only when enabled
     if (isFailureSensorEnabled(config)) {

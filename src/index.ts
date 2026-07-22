@@ -1,8 +1,8 @@
 import type { API } from 'homebridge'
 
+import { migrateLegacyPlatformAlias } from './configMigration.js'
 import { PluginUpdatePlatform } from './Platform.HAP.js'
 import { PluginUpdateMatterPlatform } from './Platform.Matter.js'
-import { migrateLegacyPlatformAlias } from './configMigration.js'
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
 import { createPlatformProxy } from './utils.js'
 

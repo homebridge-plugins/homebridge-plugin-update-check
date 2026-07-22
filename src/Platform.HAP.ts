@@ -35,7 +35,7 @@ export class PluginUpdatePlatform implements DynamicPlatformPlugin {
     api.on('didFinishLaunching', this.handleLegacyMigration.bind(this))
     this.updateSensor = new UpdateSensor(log, config, api, {
       protocol: 'hap',
-      onFailureStateChange: isFailureSensorEnabled(config) ? (failed) => this.failureSensor.setState(failed) : undefined,
+      onFailureStateChange: isFailureSensorEnabled(config) ? failed => this.failureSensor.setState(failed) : undefined,
     })
     // Register the failure sensor accessory
     api.on('didFinishLaunching', this.addFailureSensor.bind(this))

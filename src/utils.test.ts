@@ -59,7 +59,7 @@ describe('createPlatformProxy', () => {
 
     // api without Matter support
     const api = {}
-    new ProxyCtor('log', { enableMatter: true }, api)
+    void new ProxyCtor('log', { enableMatter: true }, api)
 
     expect(hapConstructed).toHaveLength(1)
     expect(matterConstructed).toHaveLength(0)
@@ -89,7 +89,7 @@ describe('createPlatformProxy', () => {
       isMatterAvailable: () => true,
       isMatterEnabled: () => true,
     }
-    new ProxyCtor('log', { enableMatter: true }, api)
+    void new ProxyCtor('log', { enableMatter: true }, api)
 
     expect(matterConstructed).toHaveLength(1)
     expect(hapConstructed).toHaveLength(0)
@@ -119,7 +119,7 @@ describe('createPlatformProxy', () => {
       isMatterAvailable: () => true,
       isMatterEnabled: () => true,
     }
-    new ProxyCtor('log', { enableMatter: false }, api)
+    void new ProxyCtor('log', { enableMatter: false }, api)
 
     expect(hapConstructed).toHaveLength(1)
     expect(matterConstructed).toHaveLength(0)
@@ -147,7 +147,7 @@ describe('createPlatformProxy', () => {
     const api = {
       matter: {},
     }
-    new ProxyCtor('log', { enableMatter: true }, api)
+    void new ProxyCtor('log', { enableMatter: true }, api)
 
     expect(matterConstructed).toHaveLength(1)
     expect(hapConstructed).toHaveLength(0)
@@ -157,7 +157,7 @@ describe('createPlatformProxy', () => {
     const configuredAccessories: any[] = []
 
     class MockHAPPlatform {
-      constructor(_log: any, _config: any, _api: any) {}
+      constructor() {}
       configureAccessory(accessory: any) {
         // Should not be called when Matter is active
         configuredAccessories.push({ platform: 'hap', accessory })
@@ -165,7 +165,7 @@ describe('createPlatformProxy', () => {
     }
 
     class MockMatterPlatform {
-      constructor(_log: any, _config: any, _api: any) {}
+      constructor() {}
       configureAccessory(accessory: any) {
         configuredAccessories.push({ platform: 'matter', accessory })
       }

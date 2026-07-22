@@ -3,7 +3,7 @@ import type { API, HomebridgeConfig } from 'homebridge'
 import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { PLUGIN_NAME, PLATFORM_NAME } from './settings.js'
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
 import { UiApi } from './ui-api.js'
 
 const LEGACY_PLATFORM_NAME = 'PluginUpdate'
@@ -49,8 +49,7 @@ export async function migrateLegacyPlatformAlias(api: API): Promise<void> {
     let hbConfig: HomebridgeConfig | undefined
     try {
       hbConfig = JSON.parse(readFileSync(configPath, 'utf8')) as HomebridgeConfig
-    }
-    catch {
+    } catch {
       hbConfig = undefined
     }
 
@@ -77,8 +76,7 @@ export async function migrateLegacyPlatformAlias(api: API): Promise<void> {
 
     await uiApi.updatePluginConfig(PLUGIN_NAME, pluginConfigs)
     await uiApi.savePluginConfig(PLUGIN_NAME)
-  }
-  catch {
+  } catch {
     // Ignore migration errors so plugin startup is never blocked.
   }
 }

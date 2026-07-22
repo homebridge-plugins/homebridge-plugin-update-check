@@ -1,4 +1,3 @@
-/* eslint-disable style/brace-style */
 /* eslint-disable style/operator-linebreak */
 
 import type {
@@ -8,15 +7,15 @@ import type {
   PlatformName,
 } from 'homebridge'
 
+import { Buffer } from 'node:buffer'
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import https from 'node:https'
+import { request as httpRequest } from 'node:http'
+import https, { request as httpsRequest } from 'node:https'
 import path from 'node:path'
 import process from 'node:process'
 
-import { request as httpRequest } from 'node:http'
-import { request as httpsRequest } from 'node:https'
 import CacheableLookup from 'cacheable-lookup'
 import jwt from 'jsonwebtoken'
 
@@ -67,8 +66,8 @@ export class UiApi {
     this.log = log
     this.hbStoragePath = hbStoragePath
 
-    const MAX_TTL_SEC = 86400; // limit TTL to 24 hours
-    this.cacheable = new CacheableLookup({ maxTtl: MAX_TTL_SEC });
+    const MAX_TTL_SEC = 86400 // limit TTL to 24 hours
+    this.cacheable = new CacheableLookup({ maxTtl: MAX_TTL_SEC })
 
     const configPath = path.resolve(hbStoragePath, 'config.json')
     const hbConfig = JSON.parse(readFileSync(configPath, 'utf8')) as HomebridgeConfig
@@ -307,12 +306,10 @@ export class UiApi {
         let stdout = ''
         let stderr = ''
 
-        // eslint-disable-next-line node/prefer-global/buffer
         npm.stdout.on('data', (chunk: Buffer) => {
           stdout += chunk.toString()
         })
 
-        // eslint-disable-next-line node/prefer-global/buffer
         npm.stderr.on('data', (chunk: Buffer) => {
           stderr += chunk.toString()
         })
@@ -487,7 +484,7 @@ export class UiApi {
       this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
       if (error.code === 'ERR_BAD_REQUEST' && error.status === 404 && apiPath === ApiPluginEndpoints.getIgnoredPluginList) {
         this.log.debug(`Error: ${JSON.stringify(error, undefined, 2)}`)
-        this.log.warn(`This feature requires a newer version of Homebridge UI. Please update to the latest version.`)
+        this.log.warn('This feature requires a newer version of Homebridge UI. Please update to the latest version.')
       }
       return []
     }
@@ -546,7 +543,9 @@ export class UiApi {
         }
         const req = (isHttps ? httpsRequest : httpRequest)(reqOptions, (res) => {
           let data = ''
-          res.on('data', (chunk) => { data += chunk })
+          res.on('data', (chunk) => {
+            data += chunk
+          })
           res.on('end', () => {
             try {
               // Check for HTTP error status codes
@@ -566,7 +565,7 @@ export class UiApi {
             }
           })
         })
-        req.on('error', (err) => reject(err))
+        req.on('error', err => reject(err))
         req.on('timeout', () => {
           req.destroy()
           reject(new Error('ETIMEOUT'))

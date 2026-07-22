@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { LEGACY_UPDATE_SENSOR_UUID_KEY, UPDATE_SENSOR_UUID_KEY, FAILURE_SENSOR_UUID_KEY, PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
+import { FAILURE_SENSOR_UUID_KEY, LEGACY_UPDATE_SENSOR_UUID_KEY, PLATFORM_NAME, PLUGIN_NAME, UPDATE_SENSOR_UUID_KEY } from './settings.js'
 
 /**
  * Unit tests for the legacy UUID migration logic in PluginUpdatePlatform.
@@ -10,7 +10,7 @@ import { LEGACY_UPDATE_SENSOR_UUID_KEY, UPDATE_SENSOR_UUID_KEY, FAILURE_SENSOR_U
  *   2. Both legacy and current UUID in cache — must unregister the stale legacy accessory.
  *   3. Normal v3 operation (no legacy) — must leave the current accessory untouched.
  */
-describe('PluginUpdatePlatform legacy UUID migration', () => {
+describe('pluginUpdatePlatform legacy UUID migration', () => {
   function buildMocks(options: { generateReturnsByKey?: Record<string, string> } = {}) {
     // Map uuid key → deterministic UUID value
     const uuidMap: Record<string, string> = {
@@ -88,8 +88,8 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     const updateSensorUuid = mockApi.hap.uuid.generate(UPDATE_SENSOR_UUID_KEY)
     const legacyUpdateSensorUuid = mockApi.hap.uuid.generate(LEGACY_UPDATE_SENSOR_UUID_KEY)
 
-    let cachedLegacyUpdateAccessory: any = undefined
-    let cachedCurrentUpdateAccessory: any = undefined
+    let cachedLegacyUpdateAccessory: any
+    let cachedCurrentUpdateAccessory: any
     let updateSensorCached = false
 
     // Simulate configureAccessory for each cached accessory
@@ -111,7 +111,9 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     let registered = updateSensorCached
 
     function handleLegacyMigration() {
-      if (!cachedLegacyUpdateAccessory) return
+      if (!cachedLegacyUpdateAccessory) {
+        return
+      }
 
       if (updateSensorCached) {
         // Both UUIDs found — remove the newer empty accessory, promote the legacy one
@@ -147,8 +149,8 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     return { registered, cachedLegacyUpdateAccessory }
   }
 
-  it('Scenario A: only legacy UUID in cache — must restore without creating a duplicate', () => {
-    const { mockLog, mockApi, mockUpdateSensor, uuidMap, fireDidFinishLaunching } = buildMocks()
+  it('scenario A: only legacy UUID in cache — must restore without creating a duplicate', () => {
+    const { mockLog, mockApi, mockUpdateSensor, uuidMap } = buildMocks()
 
     const legacyAccessory = { UUID: uuidMap[LEGACY_UPDATE_SENSOR_UUID_KEY], displayName: 'Plugin Update Check' }
 
@@ -168,7 +170,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     expect(registered).toBe(true)
   })
 
-  it('Scenario B: both legacy and current UUID in cache — must preserve legacy accessory and remove the newer empty duplicate', () => {
+  it('scenario B: both legacy and current UUID in cache — must preserve legacy accessory and remove the newer empty duplicate', () => {
     const { mockLog, mockApi, mockUpdateSensor, uuidMap } = buildMocks()
 
     const v3Accessory = { UUID: uuidMap[UPDATE_SENSOR_UUID_KEY], displayName: 'PluginUpdate' }
@@ -188,7 +190,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     expect(mockLog.info).toHaveBeenCalledWith(expect.stringContaining('Migrated update sensor to legacy cached accessory'))
   })
 
-  it('Scenario B (legacy processed first): same result regardless of configureAccessory order', () => {
+  it('scenario B (legacy processed first): same result regardless of configureAccessory order', () => {
     const { mockLog, mockApi, mockUpdateSensor, uuidMap } = buildMocks()
 
     const v3Accessory = { UUID: uuidMap[UPDATE_SENSOR_UUID_KEY], displayName: 'PluginUpdate' }
@@ -206,7 +208,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     expect(mockApi.registerPlatformAccessories).not.toHaveBeenCalled()
   })
 
-  it('Scenario C: normal v3 operation — no legacy accessory, no side effects', () => {
+  it('scenario C: normal v3 operation — no legacy accessory, no side effects', () => {
     const { mockLog, mockApi, mockUpdateSensor, uuidMap } = buildMocks()
 
     const v3Accessory = { UUID: uuidMap[UPDATE_SENSOR_UUID_KEY], displayName: 'PluginUpdate' }
@@ -220,7 +222,7 @@ describe('PluginUpdatePlatform legacy UUID migration', () => {
     expect(mockLog.warn).not.toHaveBeenCalled()
   })
 
-  it('Scenario D: no cached accessories at all — creates new accessory normally', () => {
+  it('scenario D: no cached accessories at all — creates new accessory normally', () => {
     const { mockLog, mockApi, mockUpdateSensor, uuidMap } = buildMocks()
 
     const { registered } = runMigrationSimulation(mockApi, mockLog, mockUpdateSensor, uuidMap, [])

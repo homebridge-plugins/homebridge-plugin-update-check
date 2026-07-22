@@ -14,7 +14,7 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
  * bridge is fully initialized) causes Homebridge to throw
  * "Cannot find the bridged Accessory to remove."
  */
-describe('PluginUpdateMatterPlatform stale HAP cleanup', () => {
+describe('pluginUpdateMatterPlatform stale HAP cleanup', () => {
   function buildMocks() {
     const unregisterCalls: Array<{ pluginName: string, platformName: string, accessories: any[] }> = []
     const didFinishListeners: Array<() => void> = []

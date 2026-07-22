@@ -1,14 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import * as fs from 'node:fs'
 import path from 'node:path'
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { migrateLegacyPlatformAlias, migratePlatformAliasInPluginConfigs } from './configMigration.js'
 
 // Mock node:fs before any imports that use it — vitest hoists vi.mock automatically.
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
 }))
-
-import * as fs from 'node:fs'
-import { migratePlatformAliasInPluginConfigs, migrateLegacyPlatformAlias } from './configMigration.js'
 
 describe('config migration', () => {
   it('should migrate legacy platform alias in plugin config entries', () => {
