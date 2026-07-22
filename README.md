@@ -1,117 +1,59 @@
-# homebridge-updater
+<p align="center">
+   <a href="https://github.com/homebridge-plugins/homebridge-updater"><img alt="homebridge-updater" src="https://raw.githubusercontent.com/homebridge-plugins/homebridge-updater/latest/branding/Homebridge_x_Updater.png" width="600px"></a>
+</p>
+<span align="center">
 
-[![npm](https://img.shields.io/npm/v/@homebridge-plugins/homebridge-updater) ![npm](https://img.shields.io/npm/dt/@homebridge-plugins/homebridge-updater)](https://www.npmjs.com/package/@homebridge-plugins/homebridge-updater) [![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+## homebridge-updater
 
-A [Homebridge](https://github.com/nfarina/homebridge) plugin that reports update availability as sensors and can optionally run automatic updates.
+Homebridge plugin that surfaces available Homebridge and plugin updates as HomeKit sensors
 
-## Features
+[![npm](https://img.shields.io/npm/v/@homebridge-plugins/homebridge-updater/latest?label=latest)](https://www.npmjs.com/package/@homebridge-plugins/homebridge-updater)
+[![npm](https://img.shields.io/npm/v/@homebridge-plugins/homebridge-updater/beta?label=beta)](https://github.com/homebridge/homebridge/wiki/How-to-Install-Alternate-Plugin-Versions)<br>
+[![npm](https://img.shields.io/npm/dt/@homebridge-plugins/homebridge-updater)](https://www.npmjs.com/package/@homebridge-plugins/homebridge-updater)
+[![Discord](https://img.shields.io/discord/432663330281226270?color=728ED5&logo=discord&label=hb-discord)](https://discord.gg/bHjKNkN)
 
-- Works with both HomeKit Accessory Protocol (HAP) and Matter at runtime
-- Exposes an update availability sensor
-- Exposes an optional failure sensor for automatic update/restart failures
-- Checks for updates to Node.js (LTS), Homebridge, Homebridge UI, plugins, and Docker images
-- Supports optional auto-updates for Node.js, Homebridge, Homebridge UI, and plugins
-- Intentionally does not auto-update Docker containers (check-only)
+</span>
 
-## Installation
+### Plugin Information
 
-1. Install Homebridge using the [official instructions](https://github.com/homebridge/homebridge/wiki).
-2. Install this plugin using: `sudo npm install -g @homebridge-plugins/homebridge-updater`.
-3. Update your configuration file. See sample config.json snippet below.
+- This plugin checks for updates to Homebridge and your installed plugins, and exposes the result to HomeKit. The plugin:
+  - reads your local Homebridge install and queries the public npm registry - no account or device is required
+  - lets you choose which HomeKit sensor type represents "an update is available" (for example a motion, contact or occupancy sensor)
+  - can optionally expose the sensors over Matter as well as HomeKit
 
-### Configuration
+### Prerequisites
 
-Configuration sample:
+- To use this plugin, you will need to already have:
+  - [Node](https://nodejs.org): latest version of `v22` or `v24` - any other major version is not supported.
+  - [Homebridge](https://homebridge.io): `v2` - refer to link for more information and installation instructions.
 
-```json
-"platforms": [
-    {
-        "platform": "HomebridgeUpdater",
-        "name": "Plugin Update",
-        "sensorType": "contact",
-        "failureSensorType": "motion",
-        "checkNodeUpdates": true,
-        "checkNpmUpdates": true,
-        "checkHomebridgeUpdates": true,
-        "checkHomebridgeUIUpdates": true,
-        "checkPluginUpdates": true,
-        "checkDockerUpdates": false,
-        "initialCheckDelay": 10,
-        "autoUpdateNode": false,
-        "autoUpdateNpm": false,
-        "autoUpdateHomebridge": false,
-        "autoUpdateHomebridgeUI": false,
-        "autoUpdatePlugins": false,
-        "allowDirectNpmUpdates": false,
-        "autoRestartAfterUpdates": false,
-        "respectDisabledPlugins": true,
-        "enableMatter": true
-    }
-]
-```
+### Setup
 
-#### Fields
+- [Installation](https://github.com/homebridge-plugins/homebridge-updater/wiki/Installation)
+- [Configuration](https://github.com/homebridge-plugins/homebridge-updater/wiki/Configuration)
+- [Beta Version](https://github.com/homebridge-plugins/homebridge-updater/wiki/Beta-Version)
+- [Node Version](https://github.com/homebridge-plugins/homebridge-updater/wiki/Node-Version)
 
-All sensor type options are:
+### Features
 
-- `motion`
-- `contact`
-- `occupancy`
-- `humidity`
-- `light`
-- `air`
-- `leak`
-- `smoke`
-- `dioxide`
-- `monoxide`
+- A HomeKit sensor that trips when a Homebridge or plugin update is available
+- Your choice of sensor type for the indicator
+- A separate sensor that reports when an update check itself failed
+- Scheduled, automatic re-checks
 
-`failureSensorType` also supports `none` to disable the failure sensor.
+### Help/About
 
-| Field | Description | Default |
-| --- | --- | --- |
-| `platform` | Must always be `HomebridgeUpdater` | Required |
-| `name` | Accessory name shown in Home app | `Plugin Update` |
-| `sensorType` | Sensor type for the main update sensor | `motion` |
-| `failureSensorType` | Sensor type for auto-update failure status, or `none` to disable | `motion` |
-| `checkNodeUpdates` | Check for newer Node.js LTS versions | `false` |
-| `checkNpmUpdates` | Check for newer npm versions when npm is installed | `false` |
-| `checkHomebridgeUpdates` | Check for Homebridge server updates | `true` |
-| `checkHomebridgeUIUpdates` | Check for Homebridge Config UI updates | `true` |
-| `checkPluginUpdates` | Check for installed plugin updates | `true` |
-| `checkDockerUpdates` | Check for newer Docker image versions when running in Docker | `false` |
-| `initialCheckDelay` | Delay in seconds before the first check after startup | `10` |
-| `autoUpdateNode` | Automatically run Node.js updates using `hb-service update-node` when supported | `false` |
-| `autoUpdateNpm` | Automatically update npm when a newer version is available | `false` |
-| `autoUpdateHomebridge` | Automatically update Homebridge | `false` |
-| `autoUpdateHomebridgeUI` | Automatically update Homebridge Config UI | `false` |
-| `autoUpdatePlugins` | Automatically update plugins | `false` |
-| `allowDirectNpmUpdates` | Allow direct npm update commands when UI API is unavailable | `false` |
-| `autoRestartAfterUpdates` | Restart Homebridge after successful auto-updates | `false` |
-| `respectDisabledPlugins` | Respect hidden update notifications configured in Homebridge UI | `true` |
-| `enableMatter` | Enable Matter support when available in Homebridge | `true` |
+- [Common Errors](https://github.com/homebridge-plugins/homebridge-updater/wiki/Common-Errors)
+- [Support Request](https://github.com/homebridge-plugins/homebridge-updater/issues/new/choose)
+- [Changelog](https://github.com/homebridge-plugins/homebridge-updater/blob/latest/CHANGELOG.md)
+- [About Me](https://github.com/sponsors/bwp91)
 
-## How It Works
+### Credits
 
-- The plugin checks selected update sources on a schedule.
-- If any enabled source has updates, the main sensor is set to active.
-- If automatic updates are enabled and an update/restart fails, the failure sensor is set to active.
-- If no auto-update options are enabled, the failure sensor is automatically not exposed.
+- To David Maher (Sunoo): the original creator of this plugin.
+- To the creators/contributors of [Homebridge](https://homebridge.io) who make this plugin possible.
 
-## Automatic Updates
+### Disclaimer
 
-When automatic updates are enabled, the plugin will:
-
-1. Attempt to create a backup before updates when Homebridge UI is available.
-2. Perform configured updates (Node.js, Homebridge, Homebridge UI, plugins).
-3. Optionally restart Homebridge if `autoRestartAfterUpdates` is enabled.
-4. Surface failures through the failure sensor.
-
-Automatic updates are disabled by default. Enable them only if your environment has appropriate permissions and you are comfortable with unattended updates.
-
-If Homebridge UI is not configured, automatic updates require `allowDirectNpmUpdates: true`.
-
-If npm is not installed in your environment, npm checks and npm auto-update are skipped safely.
-
-## Docker Notes
-
-Docker update checks are notification-only. The plugin does not attempt in-container self-updates by design, to avoid interrupting or corrupting the running container.
+- This plugin is a personal project that I maintain in my free time.
+- Use this plugin entirely at your own risk - please see licence for more information.
