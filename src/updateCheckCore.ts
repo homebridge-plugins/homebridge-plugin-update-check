@@ -411,7 +411,7 @@ export class UpdateCheckCore {
         && (now - record.lastAttempt) < this.autoUpdateLoopCooldownMs
       if (looping) {
         this.lastAutoUpdateFailed = true
-        this.log.warn(`Skipping auto-update of ${target.name} to ${target.latestVersion}: it was already updated but is still reported as out of date, so repeating it would just restart Homebridge in a loop. This usually means the update installed to a location Homebridge is not loading from (common with hb-service or Docker setups). Please update ${target.name} from the Homebridge UI or your usual method. Auto-update of this version is paused for 24 hours.`)
+        this.log.warn(`Skipping auto-update of ${target.name} to ${target.latestVersion}: it was already updated but is still reported as out of date, so repeating it would just restart Homebridge in a loop. Please update ${target.name} from the Homebridge UI or your usual method. Auto-update of this version is paused for 24 hours.`)
         return false
       }
       return true
@@ -427,9 +427,10 @@ export class UpdateCheckCore {
     }
 
     let successfulUpdates = 0
+    let uiApiHandledRestart = false
 
     for (const target of targetsToApply) {
-      const updated = await this.applyAutoUpdate(target)
+      const { updated, selfRestarted } = await this.applyAutoUpdate(target)
       // Record the attempt regardless of the reported result: the real test of
       // success is whether the target is still out of date on the next check.
       const previous = state[target.name]
@@ -442,6 +443,9 @@ export class UpdateCheckCore {
       }
       if (updated) {
         successfulUpdates++
+        if (selfRestarted) {
+          uiApiHandledRestart = true
+        }
       } else {
         this.lastAutoUpdateFailed = true
       }
@@ -449,7 +453,9 @@ export class UpdateCheckCore {
 
     this.saveAutoUpdateState(state)
 
-    if (successfulUpdates > 0 && this.config.autoRestartAfterUpdates === true) {
+    // The Homebridge UI restarts itself after the updates it applies, so only
+    // restart here for the direct-npm fallback path to avoid a double restart.
+    if (successfulUpdates > 0 && !uiApiHandledRestart && this.config.autoRestartAfterUpdates === true) {
       const restarted = await this.uiApi.restartHomebridge()
       if (!restarted) {
         this.lastAutoUpdateFailed = true
@@ -492,17 +498,32 @@ export class UpdateCheckCore {
     return major(to) > major(from)
   }
 
-  private async applyAutoUpdate(target: InstalledPlugin): Promise<boolean> {
+  /**
+   * Apply a single auto-update.
+   *
+   * When the Homebridge UI is configured, homebridge / the UI / plugins are updated
+   * through its plugin management, which installs into the correct plugin path AND
+   * restarts on its own (`selfRestarted: true`). npm itself is not a Homebridge
+   * package, so it always uses the direct npm path. The direct npm path is otherwise
+   * only reached when the UI API is unavailable and allowDirectNpmUpdates is enabled.
+   */
+  private async applyAutoUpdate(target: InstalledPlugin): Promise<{ updated: boolean, selfRestarted: boolean }> {
     if (target.name === 'npm') {
-      return await this.uiApi.updateNpm(target.latestVersion)
+      return { updated: await this.uiApi.updateNpm(target.latestVersion), selfRestarted: false }
     }
 
+    if (this.uiApi.isConfigured()) {
+      const queued = await this.uiApi.triggerUpdate(target.name, target.latestVersion)
+      return { updated: queued, selfRestarted: queued }
+    }
+
+    // Fallback: direct npm (only reached when the UI API is not configured; the
+    // caller has already checked allowDirectNpmUpdates in that case).
+    this.log.info(`Attempting to auto-update ${target.name} to ${target.latestVersion} directly via npm`)
     if (target.name === 'homebridge') {
-      return await this.uiApi.updateHomebridge(target.latestVersion)
+      return { updated: await this.uiApi.updateHomebridge(target.latestVersion), selfRestarted: false }
     }
-
-    this.log.info(`Attempting to auto-update ${target.name} to ${target.latestVersion}`)
-    return await this.uiApi.updatePlugin(target.name, target.latestVersion)
+    return { updated: await this.uiApi.updatePlugin(target.name, target.latestVersion), selfRestarted: false }
   }
 
   private getLocalNpmVersion(): string | undefined {

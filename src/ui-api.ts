@@ -307,6 +307,43 @@ export class UiApi {
     }
   }
 
+  /**
+   * Ask the Homebridge UI to update a package (`homebridge`, `homebridge-config-ui-x`
+   * or a plugin) through its own plugin management. Unlike a direct `npm install -g`,
+   * this installs into the path Homebridge actually loads plugins from (e.g. the
+   * hb-service / Docker custom plugin path), so the update genuinely takes effect (#257).
+   *
+   * The UI queues the install in the background and performs the appropriate restart
+   * itself, so callers must NOT also restart. Returns true once the update is queued.
+   */
+  public async triggerUpdate(packageName: string, targetVersion?: string): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false
+    }
+    const query = targetVersion ? `?version=${encodeURIComponent(targetVersion)}` : ''
+    const apiPath = `/api/plugins/update/${encodeURIComponent(packageName)}${query}`
+    try {
+      const response = await this.nativeRequestWithRetry('POST', this.baseUrl + apiPath, {
+        headers: {
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        body: {},
+        agent: this.httpsAgent,
+        lookup: this.cacheable.lookup,
+        timeout: 60000,
+      }) as { ok?: boolean } | undefined
+      if (response?.ok === true) {
+        this.log.info(`Queued update for ${packageName}${targetVersion ? ` to ${targetVersion}` : ''} via the Homebridge UI`)
+        return true
+      }
+      this.log.warn(`Homebridge UI did not confirm the update for ${packageName}: ${JSON.stringify(response)}`)
+      return false
+    } catch (error) {
+      this.log.error(`Failed to queue update for ${packageName} via the Homebridge UI: ${error}`)
+      return false
+    }
+  }
+
   public async updatePlugin(pluginName: string, targetVersion?: string): Promise<boolean> {
     this.log.info(`Attempting to update plugin ${pluginName}${targetVersion ? ` to ${targetVersion}` : ' to latest version'}`)
 
