@@ -12,11 +12,11 @@ interface Target { name: string, latestVersion: string }
 function makeUiApi(configured: boolean) {
   return {
     isConfigured: () => configured,
-    triggerUpdate: vi.fn(async () => true),
-    updateNpm: vi.fn(async () => true),
-    updateHomebridge: vi.fn(async () => true),
-    updatePlugin: vi.fn(async () => true),
-    restartHomebridge: vi.fn(async () => true),
+    triggerUpdate: vi.fn<(name: string, version?: string) => Promise<boolean>>(async () => true),
+    updateNpm: vi.fn<(version?: string) => Promise<boolean>>(async () => true),
+    updateHomebridge: vi.fn<(version?: string) => Promise<boolean>>(async () => true),
+    updatePlugin: vi.fn<(name: string, version?: string) => Promise<boolean>>(async () => true),
+    restartHomebridge: vi.fn<() => Promise<boolean>>(async () => true),
   }
 }
 
