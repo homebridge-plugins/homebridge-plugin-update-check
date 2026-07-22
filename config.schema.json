@@ -215,6 +215,12 @@
         "description": "Automatically restart Homebridge after successful automatic updates to apply changes",
         "default": false
       },
+      "autoUpdateSkipMajorVersions": {
+        "title": "Skip major versions when auto-updating",
+        "type": "boolean",
+        "description": "Only auto-update minor and patch versions. New major versions are still shown as available but are left for you to install manually, to avoid unexpected breaking changes.",
+        "default": false
+      },
       "uiNotice": {
         "title": "",
         "description": "Note: This feature may require updating Homebridge UI to a newer version. It is recommended to update to the latest version.",
@@ -250,6 +256,7 @@
         "autoUpdatePlugins",
         "allowDirectNpmUpdates",
         "autoRestartAfterUpdates",
+        "autoUpdateSkipMajorVersions",
         "uiNotice"
       ]
     }

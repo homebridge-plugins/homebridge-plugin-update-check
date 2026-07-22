@@ -11,7 +11,7 @@ import process from 'node:process'
 
 import { Cron } from 'croner'
 import { LogLevel } from 'homebridge'
-import { gt, prerelease } from 'semver'
+import { gt, major, prerelease, valid } from 'semver'
 
 import { UiApi } from './ui-api.js'
 
@@ -354,6 +354,16 @@ export class UpdateCheckCore {
         return shouldAutoUpdateUi
       }
       return shouldAutoUpdatePlugins && plugin.name !== 'node' && plugin.name !== 'Docker image'
+    }).filter((target) => {
+      // Optionally leave new major versions for manual installation so breaking
+      // changes are never applied unattended. The update is still detected and
+      // reported (the sensor still trips) - only the auto-update is held back (#263).
+      if (this.config.autoUpdateSkipMajorVersions === true && this.isMajorUpdate(target)) {
+        const level = this.firstDailyRun ? LogLevel.INFO : LogLevel.DEBUG
+        this.log.log(level, `Not auto-updating ${target.name} to ${target.latestVersion}: it is a new major version. Install it manually to accept any breaking changes.`)
+        return false
+      }
+      return true
     })
 
     // Prune the loop-guard record: anything no longer reported as out of date has
@@ -466,6 +476,20 @@ export class UpdateCheckCore {
     } catch (e) {
       this.log.debug(`Could not write auto-update state: ${e}`)
     }
+  }
+
+  /**
+   * Whether an update crosses a major version boundary. Only applies to targets
+   * with valid semver versions on both sides, so date-based versions (the Docker
+   * image) are never treated as a major bump.
+   */
+  private isMajorUpdate(target: InstalledPlugin): boolean {
+    const from = valid(target.installedVersion)
+    const to = valid(target.latestVersion)
+    if (!from || !to) {
+      return false
+    }
+    return major(to) > major(from)
   }
 
   private async applyAutoUpdate(target: InstalledPlugin): Promise<boolean> {

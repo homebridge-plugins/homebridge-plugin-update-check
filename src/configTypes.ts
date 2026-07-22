@@ -18,6 +18,7 @@ export interface PluginUpdatePlatformConfig {
   autoUpdatePlugins?: boolean
   allowDirectNpmUpdates?: boolean
   autoRestartAfterUpdates?: boolean
+  autoUpdateSkipMajorVersions?: boolean
   failureSensorType?: string
   respectDisabledPlugins?: boolean
   enableMatter?: boolean

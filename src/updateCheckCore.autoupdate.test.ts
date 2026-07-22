@@ -1,3 +1,4 @@
+import { major, valid } from 'semver'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -38,5 +39,37 @@ describe('auto-update loop guard (#257)', () => {
   it('retries once the cooldown has elapsed', () => {
     const record = { version: '2.0.0', attempts: 5, firstAttempt: now - (2 * COOLDOWN_MS), lastAttempt: now - COOLDOWN_MS - 1 }
     expect(isLooping(record, '2.0.0', now)).toBe(false)
+  })
+})
+
+/**
+ * Locks the major-version detection used to hold back major updates from
+ * auto-update when autoUpdateSkipMajorVersions is enabled (#263). Only applies
+ * to valid semver on both sides, so date-based versions are never a "major".
+ */
+function isMajorUpdate(installedVersion: string, latestVersion: string): boolean {
+  const from = valid(installedVersion)
+  const to = valid(latestVersion)
+  if (!from || !to) {
+    return false
+  }
+  return major(to) > major(from)
+}
+
+describe('skip major versions detection (#263)', () => {
+  it('treats a major bump as major', () => {
+    expect(isMajorUpdate('2.4.1', '3.0.0')).toBe(true)
+  })
+
+  it('treats a minor bump as not major', () => {
+    expect(isMajorUpdate('2.4.1', '2.5.0')).toBe(false)
+  })
+
+  it('treats a patch bump as not major', () => {
+    expect(isMajorUpdate('2.4.1', '2.4.2')).toBe(false)
+  })
+
+  it('never treats date-based (non-semver) versions as major', () => {
+    expect(isMajorUpdate('2026-05-01', '2026-06-01')).toBe(false)
   })
 })

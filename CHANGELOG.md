@@ -14,6 +14,7 @@
 - fix: propagate a renamed sensor from the config to the cached accessory so the new name reaches homekit (#251)
 - feat: detect homebridge ui beta updates when the ui update policy is set to beta (#255)
 - fix: stop auto-update restarting homebridge in a loop when an update installs but is still reported as out of date (#257)
+- feat: add an option to auto-update only minor and patch versions, leaving major versions to install manually (#263)
 
 ## [3.1.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.7) (2026-06-03)
 
