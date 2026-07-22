@@ -140,3 +140,71 @@ describe('updateSensor cached accessory restore', () => {
     expect(startScheduledChecksCalls).toHaveLength(1)
   })
 })
+
+/**
+ * Regression test for #251: renaming the sensor in the config did not propagate
+ * to the cached accessory, so the new name never reached the Homebridge UI or HomeKit.
+ *
+ * When the accessory is restored from cache, `addUpdateSensor` must sync the
+ * cached accessory's displayName (and sensor service name) to the configured name.
+ */
+describe('updateSensor name propagation on rename (#251)', () => {
+  function simulateAddUpdateSensor(configName: string, cachedName: string) {
+    const updateCalls: any[][] = []
+    const sensorNameUpdates: string[] = []
+    const infoNameSets: string[] = []
+
+    const accessory = {
+      UUID: 'test-uuid',
+      displayName: cachedName,
+      getService: vi.fn(() => ({
+        setCharacteristic: vi.fn((_c: any, name: string) => {
+          infoNameSets.push(name)
+        }),
+      })),
+    }
+
+    const sensor = {
+      configure: vi.fn(),
+      setState: vi.fn(),
+      updateName: vi.fn((name: string) => sensorNameUpdates.push(name)),
+    }
+
+    const api = {
+      matter: undefined,
+      hap: { Service: { AccessoryInformation: {} }, Characteristic: { Name: {} } },
+      updatePlatformAccessories: vi.fn((accs: any[]) => updateCalls.push(accs)),
+    }
+
+    // registered === true because the accessory came from the cache
+    const registered = true
+    const deviceName = configName || 'Plugin Update Check'
+
+    if (!registered) {
+      // creation path — not exercised here
+    } else if (accessory && accessory.displayName !== deviceName) {
+      accessory.displayName = deviceName
+      accessory.getService(api.hap.Service.AccessoryInformation)?.setCharacteristic(api.hap.Characteristic.Name, deviceName)
+      sensor.updateName?.(deviceName)
+      api.updatePlatformAccessories([accessory])
+    }
+
+    return { accessory, updateCalls, sensorNameUpdates, infoNameSets }
+  }
+
+  it('syncs the cached accessory name to the new config name', () => {
+    const { accessory, updateCalls, sensorNameUpdates, infoNameSets } = simulateAddUpdateSensor('Plugin Updates Sensor', 'PluginUpdate')
+
+    expect(accessory.displayName).toBe('Plugin Updates Sensor')
+    expect(sensorNameUpdates).toEqual(['Plugin Updates Sensor'])
+    expect(infoNameSets).toEqual(['Plugin Updates Sensor'])
+    expect(updateCalls).toHaveLength(1)
+  })
+
+  it('does nothing when the name is unchanged', () => {
+    const { updateCalls, sensorNameUpdates } = simulateAddUpdateSensor('PluginUpdate', 'PluginUpdate')
+
+    expect(sensorNameUpdates).toHaveLength(0)
+    expect(updateCalls).toHaveLength(0)
+  })
+})

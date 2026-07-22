@@ -8,6 +8,7 @@ import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
 export interface SensorProtocol {
   configure: (accessory: PlatformAccessory) => void
   setState: (state: boolean) => void
+  updateName?: (name: string) => void
 }
 
 export interface SensorOptions {
@@ -47,6 +48,13 @@ export class HAPSensor implements SensorProtocol {
       const value = tripped ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue
       this.service.setCharacteristic(this.sensorInfo.characteristicType, value)
       this.log.debug(`Set HAP sensor to ${tripped ? 'triggered' : 'normal'} state`)
+    }
+  }
+
+  updateName(name: string): void {
+    if (this.service) {
+      this.service.setCharacteristic(this.hap.Characteristic.Name, name)
+      this.service.displayName = name
     }
   }
 

@@ -11,6 +11,7 @@
 - docs: use the standard org readme banner
 - chore(deps): dependency updates
 - fix(matter): register a carbon dioxide sensor on the air quality cluster so its state updates instead of failing (#256)
+- fix: propagate a renamed sensor from the config to the cached accessory so the new name reaches homekit (#251)
 
 ## [3.1.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.7) (2026-06-03)
 

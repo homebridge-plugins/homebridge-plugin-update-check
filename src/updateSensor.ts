@@ -45,8 +45,8 @@ export class UpdateSensor {
   }
 
   addUpdateSensor(): void {
+    const deviceName = (this.config as any).name || 'Plugin Update Check'
     if (!this.registered) {
-      const deviceName = (this.config as any).name || 'Plugin Update Check'
       // Create or get accessory (for HAP) or just pass config (for Matter)
       if (!this.api.matter) {
         // HAP: create accessory and register
@@ -61,6 +61,15 @@ export class UpdateSensor {
         this.sensor.configure({ displayName: deviceName } as PlatformAccessory)
       }
       this.registered = true
+    } else if (this.accessory && this.accessory.displayName !== deviceName) {
+      // The accessory was restored from cache. If the user renamed the sensor
+      // in the config, the cached accessory keeps its old name unless we sync it,
+      // so the new name never reaches the Homebridge UI or HomeKit (#251).
+      this.accessory.displayName = deviceName
+      this.accessory.getService(this.api.hap.Service.AccessoryInformation)?.setCharacteristic(this.api.hap.Characteristic.Name, deviceName)
+      this.sensor.updateName?.(deviceName)
+      this.api.updatePlatformAccessories([this.accessory])
+      this.log.info(`Updated update sensor name to '${deviceName}'`)
     }
     // Always start checks (whether accessory was newly created or restored from cache)
     setTimeout(() => {
