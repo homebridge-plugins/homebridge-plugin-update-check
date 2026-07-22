@@ -4,7 +4,9 @@ import type { PluginUpdatePlatformConfig } from './configTypes.js'
 import type { InstalledPlugin } from './ui-api.js'
 
 import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import https from 'node:https'
+import { join } from 'node:path'
 import process from 'node:process'
 
 import { Cron } from 'croner'
@@ -12,6 +14,14 @@ import { LogLevel } from 'homebridge'
 import { gt, prerelease } from 'semver'
 
 import { UiApi } from './ui-api.js'
+
+/** A remembered auto-update attempt, used to detect and stop restart loops (#257). */
+interface AutoUpdateAttempt {
+  version: string
+  attempts: number
+  firstAttempt: number
+  lastAttempt: number
+}
 
 export class UpdateCheckCore {
   public readonly checkNode: boolean
@@ -34,11 +44,16 @@ export class UpdateCheckCore {
   public dockerUpdates: string[] = []
   public firstDailyRun: boolean = true
   private lastAutoUpdateFailed = false
+  /** Path to the file that remembers auto-update attempts across restarts. */
+  private readonly autoUpdateStatePath: string
+  /** How long (ms) to pause auto-updating a target that keeps coming back after a "successful" update. */
+  private readonly autoUpdateLoopCooldownMs = 24 * 60 * 60 * 1000
 
   constructor(log: Logging, config: PlatformConfig, storagePath: string, isDocker: boolean) {
     this.log = log
     this.config = config as PluginUpdatePlatformConfig
     this.uiApi = new UiApi(storagePath, log)
+    this.autoUpdateStatePath = join(storagePath, 'homebridge-updater-autoupdate.json')
     this.isDocker = isDocker
     this.respectDisabledPlugins = this.config.respectDisabledPlugins ?? true
     this.checkHB = this.config.checkHomebridgeUpdates ?? false
@@ -341,7 +356,22 @@ export class UpdateCheckCore {
       return shouldAutoUpdatePlugins && plugin.name !== 'node' && plugin.name !== 'Docker image'
     })
 
+    // Prune the loop-guard record: anything no longer reported as out of date has
+    // either updated successfully or is no longer offered, so forget it.
+    const state = this.loadAutoUpdateState()
+    const outstanding = new Set(updatesAvailable.map(update => update.name))
+    let stateChanged = false
+    for (const name of Object.keys(state)) {
+      if (!outstanding.has(name)) {
+        delete state[name]
+        stateChanged = true
+      }
+    }
+
     if (autoUpdateTargets.length === 0) {
+      if (stateChanged) {
+        this.saveAutoUpdateState(state)
+      }
       return
     }
 
@@ -359,14 +389,47 @@ export class UpdateCheckCore {
       return
     }
 
-    if (hasUiApi && hasNonNpmTargets) {
+    // Loop guard: skip any target we already updated to this same version that is
+    // STILL reported as out of date. Repeating it would just restart Homebridge in
+    // a loop without ever taking effect (#257). Retry at most once every cooldown.
+    const now = Date.now()
+    const targetsToApply = autoUpdateTargets.filter((target) => {
+      const record = state[target.name]
+      const looping = record
+        && record.version === target.latestVersion
+        && record.attempts >= 1
+        && (now - record.lastAttempt) < this.autoUpdateLoopCooldownMs
+      if (looping) {
+        this.lastAutoUpdateFailed = true
+        this.log.warn(`Skipping auto-update of ${target.name} to ${target.latestVersion}: it was already updated but is still reported as out of date, so repeating it would just restart Homebridge in a loop. This usually means the update installed to a location Homebridge is not loading from (common with hb-service or Docker setups). Please update ${target.name} from the Homebridge UI or your usual method. Auto-update of this version is paused for 24 hours.`)
+        return false
+      }
+      return true
+    })
+
+    if (targetsToApply.length === 0) {
+      this.saveAutoUpdateState(state)
+      return
+    }
+
+    if (hasUiApi && targetsToApply.some(target => target.name !== 'npm')) {
       await this.uiApi.createBackup()
     }
 
     let successfulUpdates = 0
 
-    for (const target of autoUpdateTargets) {
+    for (const target of targetsToApply) {
       const updated = await this.applyAutoUpdate(target)
+      // Record the attempt regardless of the reported result: the real test of
+      // success is whether the target is still out of date on the next check.
+      const previous = state[target.name]
+      const sameVersion = previous?.version === target.latestVersion
+      state[target.name] = {
+        version: target.latestVersion,
+        attempts: sameVersion ? previous.attempts + 1 : 1,
+        firstAttempt: sameVersion ? previous.firstAttempt : now,
+        lastAttempt: now,
+      }
       if (updated) {
         successfulUpdates++
       } else {
@@ -374,11 +437,34 @@ export class UpdateCheckCore {
       }
     }
 
+    this.saveAutoUpdateState(state)
+
     if (successfulUpdates > 0 && this.config.autoRestartAfterUpdates === true) {
       const restarted = await this.uiApi.restartHomebridge()
       if (!restarted) {
         this.lastAutoUpdateFailed = true
       }
+    }
+  }
+
+  private loadAutoUpdateState(): Record<string, AutoUpdateAttempt> {
+    try {
+      if (!existsSync(this.autoUpdateStatePath)) {
+        return {}
+      }
+      const parsed = JSON.parse(readFileSync(this.autoUpdateStatePath, 'utf8'))
+      return (parsed && typeof parsed === 'object') ? parsed as Record<string, AutoUpdateAttempt> : {}
+    } catch (e) {
+      this.log.debug(`Could not read auto-update state: ${e}`)
+      return {}
+    }
+  }
+
+  private saveAutoUpdateState(state: Record<string, AutoUpdateAttempt>): void {
+    try {
+      writeFileSync(this.autoUpdateStatePath, JSON.stringify(state, null, 2))
+    } catch (e) {
+      this.log.debug(`Could not write auto-update state: ${e}`)
     }
   }
 
