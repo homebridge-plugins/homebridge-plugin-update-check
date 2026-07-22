@@ -9,6 +9,7 @@ import process from 'node:process'
 
 import { Cron } from 'croner'
 import { LogLevel } from 'homebridge'
+import { gt, prerelease } from 'semver'
 
 import { UiApi } from './ui-api.js'
 
@@ -196,7 +197,11 @@ export class UpdateCheckCore {
       const plugins = await this.uiApi.getPlugins()
       if (this.checkHBUI) {
         const homebridgeUiPlugins = plugins.filter(plugin => plugin.name === 'homebridge-config-ui-x')
-        homebridgeUiPlugins.forEach((homebridgeUI) => {
+        for (const homebridgeUI of homebridgeUiPlugins) {
+          // The generic /api/plugins list only reflects the stable release for the
+          // Homebridge UI. If the user has set the UI's own update policy to beta,
+          // honour it here so a UI beta update is detected too (#255).
+          await this.applyHomebridgeUiBetaPolicy(homebridgeUI)
           if (homebridgeUI.updateAvailable) {
             const isIgnored = this.respectDisabledPlugins && ignoredPlugins.includes('homebridge-config-ui-x')
             if (!isIgnored) {
@@ -210,7 +215,7 @@ export class UpdateCheckCore {
               this.log.debug(`Ignoring Homebridge UI update: ${homebridgeUI.latestVersion} (update notifications disabled in homebridge-config-ui-x)`)
             }
           }
-        })
+        }
       }
       if (this.checkPlugins) {
         this.log.debug(`Checking ${plugins.length} plugins for updates (respectDisabledPlugins: ${this.respectDisabledPlugins})`)
@@ -279,6 +284,38 @@ export class UpdateCheckCore {
 
   public getLastAutoUpdateFailed(): boolean {
     return this.lastAutoUpdateFailed
+  }
+
+  /**
+   * When the Homebridge UI's own update policy is `beta`, the generic
+   * `/api/plugins` result (stable only) misses beta releases. This mirrors the
+   * beta check the Homebridge UI applies to itself: offer the version on the
+   * beta dist-tag only when it beats both the installed version and the stable
+   * release, so a beta user is never sent backwards to an older stable (#255).
+   */
+  private async applyHomebridgeUiBetaPolicy(homebridgeUI: InstalledPlugin): Promise<void> {
+    if (this.uiApi.getHomebridgeUiUpdatePolicy() !== 'beta' || !homebridgeUI.installedVersion) {
+      return
+    }
+    try {
+      const distTags = await this.uiApi.getNpmDistTags('homebridge-config-ui-x')
+      // Stay on the same prerelease line if already on one, otherwise track beta.
+      const installedTag = prerelease(homebridgeUI.installedVersion)?.[0]?.toString()
+      const targetTag = installedTag ?? 'beta'
+      const candidate = distTags[targetTag]
+      if (!candidate) {
+        return
+      }
+      const beatsInstalled = gt(candidate, homebridgeUI.installedVersion)
+      const beatsStable = !homebridgeUI.updateAvailable || !homebridgeUI.latestVersion || gt(candidate, homebridgeUI.latestVersion)
+      if (beatsInstalled && beatsStable) {
+        homebridgeUI.latestVersion = candidate
+        homebridgeUI.updateAvailable = true
+        this.log.debug(`Homebridge UI beta update available on tag '${targetTag}': ${candidate}`)
+      }
+    } catch (e) {
+      this.log.debug(`Failed to check Homebridge UI beta updates: ${e}`)
+    }
   }
 
   private async handleConfiguredAutoUpdates(updatesAvailable: InstalledPlugin[]): Promise<void> {

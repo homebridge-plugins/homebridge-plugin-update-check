@@ -38,6 +38,8 @@ interface UiConfig {
     key?: string
     pfx?: string
   }
+  /** How the Homebridge UI itself decides which of its own versions to offer. */
+  homebridgeUiUpdatePolicy?: 'all' | 'beta' | 'major' | 'none'
 }
 
 class ApiPluginEndpoints {
@@ -61,6 +63,7 @@ export class UiApi {
   private readonly dockerUrl?: string
   private readonly cacheable: CacheableLookup
   private readonly hbStoragePath: string
+  private readonly uiUpdatePolicy: 'all' | 'beta' | 'major' | 'none'
 
   constructor(hbStoragePath: string, log: Logging) {
     this.log = log
@@ -73,6 +76,8 @@ export class UiApi {
     const hbConfig = JSON.parse(readFileSync(configPath, 'utf8')) as HomebridgeConfig
     const config = hbConfig.platforms.find((config: { platform: string }) =>
       config.platform === 'config' || config.platform === 'homebridge-config-ui-x.config') as UiConfig
+
+    this.uiUpdatePolicy = config?.homebridgeUiUpdatePolicy || 'all'
 
     if (config) {
       const secretPath = path.resolve(hbStoragePath, '.uix-secrets')
@@ -99,6 +104,40 @@ export class UiApi {
 
   public isConfigured(): boolean {
     return this.secrets !== undefined
+  }
+
+  /**
+   * The Homebridge UI's own update policy for itself (`homebridgeUiUpdatePolicy`).
+   * The generic `/api/plugins` list only applies the per-plugin beta preference,
+   * so this is needed to honour a `beta` policy for homebridge-config-ui-x (#255).
+   */
+  public getHomebridgeUiUpdatePolicy(): 'all' | 'beta' | 'major' | 'none' {
+    return this.uiUpdatePolicy
+  }
+
+  /**
+   * Fetch the npm dist-tags (e.g. `latest`, `beta`, `next`) for a package,
+   * mapping each tag to its published version.
+   */
+  public async getNpmDistTags(packageName: string): Promise<Record<string, string>> {
+    const url = `https://registry.npmjs.org/${encodeURIComponent(packageName).replace(/^%40/, '@')}`
+    return await new Promise<Record<string, string>>((resolve, reject) => {
+      const req = https.get(url, { headers: { accept: 'application/vnd.npm.install-v1+json' } }, (res) => {
+        let data = ''
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => {
+          try {
+            const body = JSON.parse(data) as { 'dist-tags'?: Record<string, string> }
+            resolve(body['dist-tags'] ?? {})
+          } catch (error) {
+            reject(error)
+          }
+        })
+      })
+      req.on('error', reject)
+    })
   }
 
   public async getHomebridge(): Promise<InstalledPlugin> {

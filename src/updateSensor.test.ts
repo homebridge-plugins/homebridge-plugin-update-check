@@ -157,7 +157,7 @@ describe('updateSensor name propagation on rename (#251)', () => {
     const accessory = {
       UUID: 'test-uuid',
       displayName: cachedName,
-      getService: vi.fn(() => ({
+      getService: vi.fn<(service?: any) => any>(() => ({
         setCharacteristic: vi.fn((_c: any, name: string) => {
           infoNameSets.push(name)
         }),
