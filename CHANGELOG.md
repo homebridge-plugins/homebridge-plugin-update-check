@@ -16,6 +16,7 @@
 - fix: stop auto-update restarting homebridge in a loop when an update installs but is still reported as out of date (#257)
 - feat: add an option to auto-update only minor and patch versions, leaving major versions to install manually (#263)
 - fix: perform auto-updates through the homebridge ui so they install to the correct plugin path and actually take effect on hb-service and docker setups (#257)
+- fix: detect when running under the homebridge docker image so docker image updates are actually checked (#264)
 
 ## [3.1.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.7) (2026-06-03)
 

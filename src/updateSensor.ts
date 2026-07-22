@@ -2,6 +2,8 @@ import type { API, Logging, PlatformAccessory, PlatformConfig } from 'homebridge
 
 import type { SensorProtocol } from './sensorBase.js'
 
+import process from 'node:process'
+
 import { HAPSensor, MatterSensor } from './sensorBase.js'
 import { PLATFORM_NAME, PLUGIN_NAME, UPDATE_SENSOR_UUID_KEY } from './settings.js'
 import { UpdateCheckCore } from './updateCheckCore.js'
@@ -26,7 +28,10 @@ export class UpdateSensor {
     this.config = config
     this.api = api
     this.onFailureStateChange = options.onFailureStateChange
-    const isDocker = false // Adjust if needed
+    // The official Homebridge Docker image sets this environment variable, so use
+    // it to detect Docker. Without this the Docker image update check never ran,
+    // regardless of the "check Docker updates" toggle (#264).
+    const isDocker = process.env.DOCKER_HOMEBRIDGE_VERSION !== undefined
     this.updateCore = new UpdateCheckCore(log, config, api.user.storagePath(), isDocker)
     const protocol = options.protocol ?? (api.matter ? 'matter' : 'hap')
     // Choose protocol implementation
