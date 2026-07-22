@@ -162,11 +162,17 @@ export class MatterSensor implements SensorProtocol {
         untrippedValue: 5500, // 55%
       },
       dioxide: {
+        // HAP exposes a real CarbonDioxideSensor, but the Homebridge Matter
+        // runtime has no carbon-dioxide cluster, so under Matter we register
+        // and update the airQuality cluster (the same one configure() sets up
+        // for the AirQualitySensor device type). Using carbonDioxideMeasurement
+        // here left setState updating a cluster that was never registered,
+        // which rolled back with "Unknown cluster name" every time (#256).
         deviceType: 'AirQualitySensor',
-        cluster: 'carbonDioxideMeasurement',
-        attribute: 'measuredValue',
-        trippedValue: 10000, // 10000 ppm
-        untrippedValue: 400, // 400 ppm
+        cluster: 'airQuality',
+        attribute: 'airQuality',
+        trippedValue: 5, // Very Poor
+        untrippedValue: 1, // Good
       },
       air: {
         deviceType: 'AirQualitySensor',
