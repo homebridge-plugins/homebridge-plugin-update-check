@@ -17,6 +17,7 @@
 - feat: add an option to auto-update only minor and patch versions, leaving major versions to install manually (#263)
 - fix: perform auto-updates through the homebridge ui so they install to the correct plugin path and actually take effect on hb-service and docker setups (#257)
 - fix: detect when running under the homebridge docker image so docker image updates are actually checked (#264)
+- fix(ui): register the cached-accessories handler with the leading slash the UI calls, so it works on older Homebridge UI versions
 
 ## [3.1.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.7) (2026-06-03)
 
