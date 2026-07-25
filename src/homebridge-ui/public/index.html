@@ -1,3 +1,24 @@
+<style>
+  .dark-mode {
+    background-color: #242424;
+    color: lightgrey;
+
+    .form-control {
+      background-color: #333333 !important;
+      border: none !important;
+      color: #eeeeee !important;
+    }
+
+    thead, tbody, tr {
+      border-style: hidden;
+    }
+
+    th {
+      color: #eeeeee !important;
+      font-weight: 500 !important;
+    }
+  }
+</style>
 <p class="text-center">
   <img
     src="https://raw.githubusercontent.com/homebridge/branding/latest/logos/homebridge-color-round.svg"
@@ -11,7 +32,7 @@
 </div>
 <div id="menuWrapper" class="btn-group w-100 mb-0" role="group" aria-label="UI Menu" style="display: none">
   <button type="button" class="btn btn-primary" id="menuSettings">Settings</button>
-  <button type="button" class="btn btn-primary" id="menuDevices">Devices</button>
+  <button type="button" class="btn btn-primary" id="menuDevices">My Devices</button>
   <button type="button" class="btn btn-primary mr-0" id="menuHome">Support</button>
 </div>
 <div id="disabledBanner" class="alert alert-secondary mb-0 mt-3" role="alert" style="display: none">
@@ -51,57 +72,54 @@
 </div>
 <div id="pageSupport" class="mt-4" style="display: none">
   <p class="text-center lead">Thank you for using <strong>homebridge-updater</strong></p>
-  <p class="text-center">The links below will take you to our GitHub wiki</p>
+  <h5>Plugin Information</h5>
+<ul>
+  <li>This plugin checks for updates to Homebridge and your installed plugins, and exposes the result to HomeKit. The plugin:</li>
+  <ul>
+    <li>reads your local Homebridge install and queries the public npm registry - no account or device is required</li>
+    <li>lets you choose which HomeKit sensor type represents "an update is available" (for example a motion, contact or occupancy sensor)</li>
+    <li>can optionally expose the sensors over Matter as well as HomeKit</li>
+  </ul>
+</ul>
+  <h5>Prerequisites</h5>
+<ul>
+  <li>To use this plugin, you will need to already have:</li>
+  <ul>
+    <li><a href="https://nodejs.org" target="_blank">Node</a>: latest version of <code>v22</code> or <code>v24</code> - any other major version is not supported.</li>
+    <li><a href="https://homebridge.io" target="_blank">Homebridge</a>: <code>v2</code> - refer to link for more information and installation instructions.</li>
+  </ul>
+</ul>
   <h5>Setup</h5>
-  <ul>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki" target="_blank">Wiki Home</a>
-    </li>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Configuration"
-        target="_blank">Configuration</a>
-    </li>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Beta-Version"
-        target="_blank">Beta
-        Version</a>
-    </li>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Node-Version"
-        target="_blank">Node
-        Version</a>
-    </li>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Uninstallation"
-        target="_blank">Uninstallation</a>
-    </li>
-  </ul>
+<ul>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Installation" target="_blank">Installation</a></li>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Configuration" target="_blank">Configuration</a></li>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Beta-Version" target="_blank">Beta Version</a></li>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Node-Version" target="_blank">Node Version</a></li>
+</ul>
   <h5>Features</h5>
-  <ul>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Supported-Devices"
-        target="_blank">Supported Devices</a>
-    </li>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Fan-Modes" target="_blank">Fan
-        Modes</a>
-    </li>
-  </ul>
+<ul>
+  <li>A HomeKit sensor that trips when a Homebridge or plugin update is available</li>
+  <li>Your choice of sensor type for the indicator</li>
+  <li>A separate sensor that reports when an update check itself failed</li>
+  <li>Scheduled, automatic re-checks</li>
+</ul>
   <h5>Help/About</h5>
-  <ul>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/issues/new/choose"
-        target="_blank">Support
-        Request</a>
-    </li>
-    <li>
-      <a href="https://github.com/homebridge-plugins/homebridge-updater/blob/latest/CHANGELOG.md"
-        target="_blank">Changelog</a>
-    </li>
-    <li>
-      <a href="https://github.com/Sunoo" target="_blank">About Me</a>
-    </li>
-  </ul>
+<ul>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/wiki/Common-Errors" target="_blank">Common Errors</a></li>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/issues/new/choose" target="_blank">Support Request</a></li>
+  <li><a href="https://github.com/homebridge-plugins/homebridge-updater/blob/latest/CHANGELOG.md" target="_blank">Changelog</a></li>
+  <li><a href="https://github.com/sponsors/bwp91" target="_blank">About Me</a></li>
+</ul>
+  <h5>Credits</h5>
+<ul>
+  <li>To David Maher (Sunoo): the original creator of this plugin.</li>
+  <li>To the creators/contributors of <a href="https://homebridge.io" target="_blank">Homebridge</a> who make this plugin possible.</li>
+</ul>
+  <h5>Disclaimer</h5>
+<ul>
+  <li>This plugin is a personal project that I maintain in my free time.</li>
+  <li>Use this plugin entirely at your own risk - please see licence for more information.</li>
+</ul>
 </div>
 <script>
   (async () => {
