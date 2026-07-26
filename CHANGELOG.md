@@ -24,6 +24,7 @@
 - style(ui): standardise the custom ui layout and sync the support tab with the readme
 - chore: declare the supports-hap transport keyword for the homebridge ui
 - docs(changelog): list every unreleased commit in the pending section
+- chore(deps): dependency updates
 
 ## [3.1.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.7) (2026-06-03)
 
