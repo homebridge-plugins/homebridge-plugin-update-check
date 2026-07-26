@@ -16,10 +16,14 @@
 - fix: stop auto-update restarting homebridge in a loop when an update installs but is still reported as out of date (#257)
 - feat: add an option to auto-update only minor and patch versions, leaving major versions to install manually (#263)
 - fix: perform auto-updates through the homebridge ui so they install to the correct plugin path and actually take effect on hb-service and docker setups (#257)
+- test: type the auto-update routing mocks so the build type-checks
 - fix: detect when running under the homebridge docker image so docker image updates are actually checked (#264)
-- fix(ui): register the cached-accessories handler with the leading slash the UI calls, so it works on older Homebridge UI versions
+- fix(ui): register the cached-accessories handler with the leading slash the UI calls
+- chore(github): use the shared homebridge action to deprecate past pre-releases
+- docs(github): name this plugin's devices in the issue forms instead of meater
 - style(ui): standardise the custom ui layout and sync the support tab with the readme
 - chore: declare the supports-hap transport keyword for the homebridge ui
+- docs(changelog): list every unreleased commit in the pending section
 
 ## [3.1.7](https://github.com/homebridge-plugins/homebridge-updater/compare/tag/v3.1.7) (2026-06-03)
 
