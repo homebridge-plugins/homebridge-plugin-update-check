@@ -38,6 +38,7 @@
   "keywords": [
     "homebridge-plugin",
     "supports-matter",
+    "supports-hap",
     "plugin",
     "update",
     "updates",
