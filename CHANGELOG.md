@@ -1,3 +1,9 @@
+## v3.1.10 (Pending Release)
+
+### Changed
+
+- chore: keep test files out of the published package
+
 ## v3.1.9 (2026-07-26)
 
 ### Changed
