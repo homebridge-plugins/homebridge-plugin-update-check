@@ -46,7 +46,6 @@ Homebridge plugin that surfaces available Homebridge and plugin updates as HomeK
 - [Common Errors](https://github.com/homebridge-plugins/homebridge-updater/wiki/Common-Errors)
 - [Support Request](https://github.com/homebridge-plugins/homebridge-updater/issues/new/choose)
 - [Changelog](https://github.com/homebridge-plugins/homebridge-updater/blob/latest/CHANGELOG.md)
-- [About Me](https://github.com/sponsors/bwp91)
 
 ### Credits
 
