@@ -124,6 +124,11 @@ export class UiApi {
     return await new Promise<Record<string, string>>((resolve, reject) => {
       const req = https.get(url, { headers: { accept: 'application/vnd.npm.install-v1+json' } }, (res) => {
         let data = ''
+        // Without an 'error' listener on the response, a connection dropped after
+        // the headers arrive is an uncaught exception - and the promise never
+        // settles either, so the caller waits for ever. The request's own error
+        // handler below only covers failures before the response arrives.
+        res.on('error', reject)
         res.on('data', (chunk) => {
           data += chunk
         })
@@ -619,6 +624,11 @@ export class UiApi {
         }
         const req = (isHttps ? httpsRequest : httpRequest)(reqOptions, (res) => {
           let data = ''
+          // Without an 'error' listener on the response, a connection dropped after
+          // the headers arrive is an uncaught exception - and the promise never
+          // settles either, so the caller waits for ever. The request's own error
+          // handler below only covers failures before the response arrives.
+          res.on('error', reject)
           res.on('data', (chunk) => {
             data += chunk
           })

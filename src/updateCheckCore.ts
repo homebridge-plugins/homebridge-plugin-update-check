@@ -80,6 +80,11 @@ export class UpdateCheckCore {
         const latestLtsVersion = await new Promise<string>((resolve, reject) => {
           const req = https.get('https://nodejs.org/dist/index.json', (res) => {
             let data = ''
+            // Without an 'error' listener on the response, a connection dropped after
+            // the headers arrive is an uncaught exception - and the promise never
+            // settles either, so the caller waits for ever. The request's own error
+            // handler below only covers failures before the response arrives.
+            res.on('error', reject)
             res.on('data', (chunk) => {
               data += chunk
             })
@@ -539,6 +544,11 @@ export class UpdateCheckCore {
     return await new Promise<string>((resolve, reject) => {
       const req = https.get('https://registry.npmjs.org/npm/latest', (res) => {
         let data = ''
+        // Without an 'error' listener on the response, a connection dropped after
+        // the headers arrive is an uncaught exception - and the promise never
+        // settles either, so the caller waits for ever. The request's own error
+        // handler below only covers failures before the response arrives.
+        res.on('error', reject)
         res.on('data', (chunk) => {
           data += chunk
         })

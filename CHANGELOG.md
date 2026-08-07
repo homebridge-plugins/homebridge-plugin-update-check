@@ -12,6 +12,7 @@
 - chore: remove personal funding links
 - docs: add node 26 to the supported node versions
 - chore: exclude test files and the test config from the published package
+- fix: recover from a connection dropped mid-response instead of crashing the bridge
 
 ## v3.1.9 (2026-07-26)
 
