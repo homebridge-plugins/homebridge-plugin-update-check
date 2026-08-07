@@ -22,6 +22,7 @@ export class UpdateSensor {
   private readonly onFailureStateChange?: (failed: boolean) => void
   private accessory?: PlatformAccessory
   private registered = false
+  private initialCheckTimer?: ReturnType<typeof setTimeout>
 
   constructor(log: Logging, config: PlatformConfig, api: API, options: UpdateSensorOptions = {}) {
     this.log = log
@@ -41,6 +42,11 @@ export class UpdateSensor {
       this.sensor = new HAPSensor({ log, api, sensorType: config.sensorType })
     }
     api.on('didFinishLaunching', this.addUpdateSensor.bind(this))
+
+    // Stop the scheduled checks on the way out. UpdateCheckCore has always had a
+    // stopScheduledChecks() for this, but nothing ever called it - so a check
+    // could start against a torn-down sensor while Homebridge was shutting down.
+    api.on('shutdown', () => this.shutdown())
   }
 
   configureAccessory(accessory: PlatformAccessory): void {
@@ -77,13 +83,22 @@ export class UpdateSensor {
       this.log.info(`Updated update sensor name to '${deviceName}'`)
     }
     // Always start checks (whether accessory was newly created or restored from cache)
-    setTimeout(() => {
+    this.initialCheckTimer = setTimeout(() => {
       this.doCheck()
     }, this.updateCore.initialCheckDelay * 1000)
     // Schedule periodic checks
     this.updateCore.startScheduledChecks(() => {
       this.doCheck()
     })
+  }
+
+  /** Cancel the first check and the scheduled ones, on the way out */
+  shutdown(): void {
+    if (this.initialCheckTimer) {
+      clearTimeout(this.initialCheckTimer)
+      this.initialCheckTimer = undefined
+    }
+    this.updateCore.stopScheduledChecks()
   }
 
   async doCheck(): Promise<void> {
