@@ -142,6 +142,11 @@ export class UiApi {
         })
       })
       req.on('error', reject)
+      // Without a timeout a stalled socket never settles this promise, so an
+      // update check could hang for the rest of the session.
+      req.setTimeout(30000, () => {
+        req.destroy(new Error('the request timed out after 30 seconds'))
+      })
     })
   }
 

@@ -104,6 +104,11 @@ export class UpdateCheckCore {
             })
           })
           req.on('error', reject)
+          // Without a timeout a stalled socket never settles this promise, so an
+          // update check could hang for the rest of the session.
+          req.setTimeout(30000, () => {
+            req.destroy(new Error('the request timed out after 30 seconds'))
+          })
         })
         // Compare versions (semver)
         const semverCompare = (a: string, b: string) => {
@@ -566,6 +571,11 @@ export class UpdateCheckCore {
         })
       })
       req.on('error', reject)
+      // Without a timeout a stalled socket never settles this promise, so an
+      // update check could hang for the rest of the session.
+      req.setTimeout(30000, () => {
+        req.destroy(new Error('the request timed out after 30 seconds'))
+      })
     })
   }
 
