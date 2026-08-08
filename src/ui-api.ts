@@ -561,7 +561,10 @@ export class UiApi {
         agent: this.httpsAgent,
         lookup: this.cacheable.lookup,
       })
-      this.log.debug(`${this.baseUrl + apiPath}: ${JSON.stringify(data)}`)
+      // Not the body. makeCall() is used for /api/config-editor/plugin/<name>,
+      // so this was dumping other plugins' whole config blocks - their
+      // usernames, passwords and api keys - into this plugin's debug log.
+      this.log.debug(`${this.baseUrl + apiPath}: ${Array.isArray(data) ? `${data.length} item(s)` : 'ok'}`)
       if (!Array.isArray(data)) {
         return [data]
       }

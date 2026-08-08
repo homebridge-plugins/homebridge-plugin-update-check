@@ -16,6 +16,7 @@
 - fix: give up on a stalled update check, rather than waiting for the rest of the session
 - fix: stop the scheduled update checks when homebridge shuts down
 - fix: log the error message rather than the whole error object, which can carry the api response
+- fix: stop writing other plugins' config, credentials included, into the debug log
 
 ## v3.1.9 (2026-07-26)
 
