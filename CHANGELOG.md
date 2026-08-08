@@ -17,6 +17,7 @@
 - fix: stop the scheduled update checks when homebridge shuts down
 - fix: log the error message rather than the whole error object, which can carry the api response
 - fix: stop writing other plugins' config, credentials included, into the debug log
+- fix: say what actually went wrong, rather than logging "undefined error connecting to"
 
 ## v3.1.9 (2026-07-26)
 

@@ -19,6 +19,8 @@ import process from 'node:process'
 import CacheableLookup from 'cacheable-lookup'
 import jwt from 'jsonwebtoken'
 
+import { describeError } from './utils.js'
+
 export interface InstalledPlugin {
   name: string
   installedVersion: string
@@ -546,7 +548,7 @@ export class UiApi {
       if (error.code === 'ETIMEOUT') {
         this.log.error(`Timeout error connecting to ${this.dockerUrl}`)
       } else {
-        this.log.error(`${error.code} error connecting to ${this.dockerUrl}`)
+        this.log.error(`Error connecting to ${this.dockerUrl}: ${describeError(error)}`)
       }
       return { count: 0, results: [] }
     }
@@ -570,7 +572,7 @@ export class UiApi {
       }
       return data
     } catch (error: any) {
-      this.log.error(`${error.code} error connecting to ${this.baseUrl + apiPath}`)
+      this.log.error(`Error connecting to ${this.baseUrl + apiPath}: ${describeError(error)}`)
       if (error.code === 'ERR_BAD_REQUEST' && error.status === 404 && apiPath === ApiPluginEndpoints.getIgnoredPluginList) {
         this.log.debug(`Error: ${error instanceof Error ? error.message : String(error)}`)
         this.log.warn('This feature requires a newer version of Homebridge UI. Please update to the latest version.')
@@ -662,7 +664,11 @@ export class UiApi {
         req.on('error', err => reject(err))
         req.on('timeout', () => {
           req.destroy()
-          reject(new Error('ETIMEOUT'))
+          // The callers branch on `error.code`, so the timeout has to carry one.
+          // Thrown as a bare Error it had a message and no code at all, so the
+          // timeout branch never matched and the log said "undefined error"
+          // instead of naming the timeout (#276).
+          reject(Object.assign(new Error('ETIMEOUT'), { code: 'ETIMEOUT' }))
         })
         if (requestBody) {
           req.write(requestBody)

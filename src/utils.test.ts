@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createPlatformProxy, isFailureSensorEnabled } from './utils.js'
+import { createPlatformProxy, describeError, isFailureSensorEnabled } from './utils.js'
 
 describe('isFailureSensorEnabled', () => {
   it('should return false when failureSensorType is "none"', () => {
@@ -181,5 +181,36 @@ describe('createPlatformProxy', () => {
     expect(configuredAccessories).toHaveLength(1)
     expect(configuredAccessories[0].platform).toBe('matter')
     expect(configuredAccessories[0].accessory).toBe(staleAccessory)
+  })
+})
+
+describe('describeError', () => {
+  it('uses the error code, which is the most useful thing for a network failure', () => {
+    expect(describeError(Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' }))).toBe('ECONNREFUSED')
+  })
+
+  // ⚠️ The reason this exists. Reading `error.code` on an error that has none
+  // put the literal word "undefined" in the log where the reason should have
+  // been, so the line said something failed and then withheld what (#276).
+  it('falls back to the message when the error carries no code', () => {
+    expect(describeError(new Error('socket hang up'))).toBe('socket hang up')
+  })
+
+  it('ignores an empty code rather than logging a blank reason', () => {
+    expect(describeError(Object.assign(new Error('socket hang up'), { code: '' }))).toBe('socket hang up')
+  })
+
+  it('handles a value that was never an Error', () => {
+    expect(describeError('everything broke')).toBe('everything broke')
+  })
+
+  // "[object Object]" tells a reader no more than "undefined" did.
+  it('says something readable for a plain object with nothing on it', () => {
+    expect(describeError({})).toBe('unknown error')
+  })
+
+  it('does not fall over on null or undefined', () => {
+    expect(describeError(null)).toBe('null')
+    expect(describeError(undefined)).toBe('undefined')
   })
 })

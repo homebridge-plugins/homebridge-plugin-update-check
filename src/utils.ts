@@ -20,6 +20,34 @@ export function isFailureSensorEnabled(config: PlatformConfig): boolean {
 }
 
 /**
+ * Describe a caught error for a log line.
+ *
+ * Node's network errors carry a `code` - ECONNREFUSED, ENOTFOUND and the rest -
+ * and that is the most useful thing to put in front of someone reading a log.
+ * Plenty of errors have no code at all though, and reading `error.code` on one
+ * of those printed the literal word "undefined" where the reason should have
+ * been (#276): the log said something had failed and then withheld what.
+ *
+ * @param error The caught value, which is not necessarily an Error.
+ * @returns The error code, or failing that its message, or a last-resort string.
+ */
+export function describeError(error: unknown): string {
+  const code = (error as { code?: unknown } | null | undefined)?.code
+  if (typeof code === 'string' && code !== '') {
+    return code
+  }
+
+  if (error instanceof Error && error.message !== '') {
+    return error.message
+  }
+
+  // String(error) on a plain object gives "[object Object]", which is no more
+  // use to a reader than "undefined" was.
+  const described = String(error)
+  return described === '[object Object]' ? 'unknown error' : described
+}
+
+/**
  * Factory function that creates a platform proxy constructor.
  * Selects between HAP and Matter platform implementations at runtime
  * based on whether Homebridge Matter support is available and enabled.
