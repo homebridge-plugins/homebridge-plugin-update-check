@@ -3,6 +3,7 @@
 ### Changed
 
 - fix: declare the ui api token as a service token, so newer homebridge ui versions accept it
+- chore(deps): dependency updates
 
 ## v3.1.10 (2026-08-10)
 
