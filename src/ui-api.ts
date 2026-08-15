@@ -19,6 +19,7 @@ import process from 'node:process'
 import CacheableLookup from 'cacheable-lookup'
 import jwt from 'jsonwebtoken'
 
+import { PLUGIN_NAME } from './settings.js'
 import { describeError } from './utils.js'
 
 export interface InstalledPlugin {
@@ -680,14 +681,30 @@ export class UiApi {
     })
   }
 
+  /**
+   * Mint a token for the Homebridge UI api. There is no account to log in
+   * with, so the token is signed with the UI's own secret key, which is
+   * readable here because this plugin runs alongside it.
+   *
+   * `service` is what tells the UI this is a program rather than a person, so
+   * it does not look for a matching user record. Without it, newer versions
+   * reject the token: they check the username against the auth file to revoke
+   * deleted and demoted users, and this one has never been a user. Older
+   * versions ignore the claim, so it is safe to send to any of them.
+   *
+   * The UI caps a service token's lifetime, so the one minute below must stay
+   * well inside that; the token is dropped after thirty seconds and minted
+   * again as needed.
+   */
   public getToken(): string {
     if (this.token) {
       return this.token
     }
 
-    const user = { // fake user
-      username: '@homebridge-plugins/homebridge-updater',
-      name: '@homebridge-plugins/homebridge-updater',
+    const user = {
+      username: PLUGIN_NAME,
+      name: PLUGIN_NAME,
+      service: PLUGIN_NAME,
       admin: true,
       instanceId: createHash('sha256').update(this.secrets!.secretKey).digest('hex'),
     }
