@@ -1,3 +1,9 @@
+## v3.1.12 (Pending Release)
+
+### Changed
+
+- fix(matter): declare the cluster each sensor actually updates, so the log stops warning about it
+
 ## v3.1.11 (2026-08-16)
 
 ### Changed

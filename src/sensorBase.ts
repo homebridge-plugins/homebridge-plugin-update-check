@@ -227,8 +227,8 @@ export class MatterSensor implements SensorProtocol {
         matterDeviceType = this.api.matter.deviceTypes.MotionSensor
       }
       clusters = {
-        'occupancy-sensing': {
-          occupancy: 0,
+        occupancySensing: {
+          occupancy: { occupied: false },
           occupancySensorType: 0,
           occupancySensorTypeBitmap: { pir: true, ultrasonic: false, physicalContact: false },
         },
@@ -243,8 +243,8 @@ export class MatterSensor implements SensorProtocol {
         matterDeviceType = this.api.matter.deviceTypes.ContactSensor
       }
       clusters = {
-        contactSensor: {
-          contactState: 0,
+        booleanState: {
+          stateValue: true,
         },
       }
     } else if (info.deviceType === 'SmokeSensor') {
@@ -272,8 +272,8 @@ export class MatterSensor implements SensorProtocol {
         matterDeviceType = this.api.matter.deviceTypes.LeakSensor
       }
       clusters = {
-        leakDetection: {
-          leakState: 0,
+        booleanState: {
+          stateValue: false,
         },
       }
     } else if (info.deviceType === 'LightSensor') {
