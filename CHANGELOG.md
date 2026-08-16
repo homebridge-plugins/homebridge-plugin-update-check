@@ -3,6 +3,7 @@
 ### Changed
 
 - fix(matter): declare the cluster each sensor actually updates, so the log stops warning about it
+- chore(deps): dependency updates
 
 ## v3.1.11 (2026-08-16)
 
