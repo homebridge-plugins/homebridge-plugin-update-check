@@ -14,6 +14,7 @@ import { LogLevel } from 'homebridge'
 import { gt, major, prerelease, valid } from 'semver'
 
 import { UiApi } from './ui-api.js'
+import { orderAutoUpdateTargets } from './utils.js'
 
 /** A remembered auto-update attempt, used to detect and stop restart loops (#257). */
 interface AutoUpdateAttempt {
@@ -439,7 +440,9 @@ export class UpdateCheckCore {
     let successfulUpdates = 0
     let uiApiHandledRestart = false
 
-    for (const target of targetsToApply) {
+    // The UI's own update goes last: once it lands, the UI restarts itself,
+    // and that exit kills any npm run it still has in flight (#278).
+    for (const target of orderAutoUpdateTargets(targetsToApply)) {
       const { updated, selfRestarted } = await this.applyAutoUpdate(target)
       // Record the attempt regardless of the reported result: the real test of
       // success is whether the target is still out of date on the next check.

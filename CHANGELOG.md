@@ -1,3 +1,9 @@
+## v3.1.13 (Pending Release)
+
+### Changed
+
+- fix: send the ui its own update last, so its restart cannot kill another update mid-install
+
 ## v3.1.12 (2026-08-16)
 
 ### Changed

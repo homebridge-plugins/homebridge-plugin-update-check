@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createPlatformProxy, describeError, isFailureSensorEnabled } from './utils.js'
+import { createPlatformProxy, describeError, isFailureSensorEnabled, orderAutoUpdateTargets } from './utils.js'
 
 describe('isFailureSensorEnabled', () => {
   it('should return false when failureSensorType is "none"', () => {
@@ -212,5 +212,29 @@ describe('describeError', () => {
   it('does not fall over on null or undefined', () => {
     expect(describeError(null)).toBe('null')
     expect(describeError(undefined)).toBe('undefined')
+  })
+})
+
+/**
+ * Locks the auto-update batch ordering (#278): the UI's own update must run
+ * last, because the UI restarts itself after applying it and that exit kills
+ * any npm install still running for a later target.
+ */
+describe('orderAutoUpdateTargets (#278)', () => {
+  const t = (name: string) => ({ name })
+
+  it('moves the ui to the end, keeping the relative order of everything else', () => {
+    expect(orderAutoUpdateTargets([t('homebridge'), t('homebridge-config-ui-x'), t('homebridge-noip'), t('homebridge-updater')]))
+      .toEqual([t('homebridge'), t('homebridge-noip'), t('homebridge-updater'), t('homebridge-config-ui-x')])
+  })
+
+  it('leaves a batch without the ui untouched', () => {
+    expect(orderAutoUpdateTargets([t('homebridge'), t('homebridge-noip')]))
+      .toEqual([t('homebridge'), t('homebridge-noip')])
+  })
+
+  it('handles a ui-only batch and an empty batch', () => {
+    expect(orderAutoUpdateTargets([t('homebridge-config-ui-x')])).toEqual([t('homebridge-config-ui-x')])
+    expect(orderAutoUpdateTargets([])).toEqual([])
   })
 })

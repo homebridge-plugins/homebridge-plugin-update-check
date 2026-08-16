@@ -20,6 +20,23 @@ export function isFailureSensorEnabled(config: PlatformConfig): boolean {
 }
 
 /**
+ * Order a batch of auto-update targets so the Homebridge UI's own update runs
+ * LAST, keeping the relative order of everything else.
+ *
+ * The UI applies each update we send it and, when the update is the UI itself,
+ * restarts its own process shortly afterwards. That exit kills any npm install
+ * the UI still has running, which can leave the package it was unpacking
+ * broken on disk - a Homebridge caught like that cannot start again (#278).
+ * Sending the UI's update last means nothing is ever queued behind it.
+ */
+export function orderAutoUpdateTargets<T extends { name: string }>(targets: T[]): T[] {
+  return [
+    ...targets.filter(target => target.name !== 'homebridge-config-ui-x'),
+    ...targets.filter(target => target.name === 'homebridge-config-ui-x'),
+  ]
+}
+
+/**
  * Describe a caught error for a log line.
  *
  * Node's network errors carry a `code` - ECONNREFUSED, ENOTFOUND and the rest -
