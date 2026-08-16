@@ -2,7 +2,7 @@
   "name": "@homebridge-plugins/homebridge-updater",
   "displayName": "Homebridge Updater",
   "type": "module",
-  "version": "3.1.12",
+  "version": "3.1.13",
   "description": "A Homebridge plugin for checking for updates to Homebridge and plugins",
   "author": "David Maher",
   "license": "BSD-2-Clause",
